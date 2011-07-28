@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Data.Objects;
+using System.Data.Linq;
 using System.Linq;
 
 using Asynq.ParameterContainers;
@@ -22,10 +22,10 @@ namespace Asynq.Queries
         // NOTE: Obviously we would never use ObjectContext itself, but rather a code-generated derived class of it
         // that describes our entity model.
 
-        public QueryDescriptor<NoParameters, ObjectContext, string>
+        public QueryDescriptor<NoParameters, DataContext, string>
             GetIntsFrom0to99 = Query.Describe(
                 // Describe the query as a function based on the input parameters and an ObjectContext-deriving class:
-                (NoParameters p, ObjectContext db) =>
+                (NoParameters p, DataContext db) =>
 
                     from i in Enumerable.Range(0, 100).AsQueryable()
                     select new { i }
@@ -36,9 +36,9 @@ namespace Asynq.Queries
                ,row => row.i.ToString()
             );
 
-        public QueryDescriptor<SingleIdentifierParameters<SampleID>, ObjectContext, Sample>
+        public QueryDescriptor<SingleIdentifierParameters<SampleID>, DataContext, Sample>
             GetSampleByID = Query.Describe(
-                (SingleIdentifierParameters<SampleID> p, ObjectContext db) =>
+                (SingleIdentifierParameters<SampleID> p, DataContext db) =>
 
                     from i in Enumerable.Range(0, 100).AsQueryable()
                     where i == p.ID.Value
