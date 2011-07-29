@@ -48,15 +48,39 @@ namespace Asynq.Queries
                 // the type requested without any required conversions or mappings.
             );
 
+        public sealed class WrapClass
+        {
+            public int? ID1 { get; set; }
+            public string Code1 { get; set; }
+            public string Section1 { get; set; }
+            public int? CourseID1 { get; set; }
+
+            public WrapClass()
+            {
+            }
+        }
+
         public QueryDescriptor<OneIDParameter<SampleID>, Tmp, Class>
             GetClassByID = Query.Describe(
                 (OneIDParameter<SampleID> p, Tmp db) =>
 
                     from cl in db.Class
-                    where cl.ID == p.ID.Value
-                    select new { cl }
+                    where new int[] { 2, p.ID.Value }.Contains(cl.ID)
+                    select new WrapClass
+                    {
+                        ID1 = cl.ID,
+                        Code1 = cl.Code,
+                        Section1 = cl.Section,
+                        CourseID1 = cl.CourseID,
+                    }
 
-               ,row => row.cl
+               ,row => !row.ID1.HasValue ? null : new Class
+               {
+                   ID = row.ID1.Value,
+                   Code = row.Code1,
+                   Section = row.Section1,
+                   CourseID = row.CourseID1.Value
+               }
             );
     }
 }

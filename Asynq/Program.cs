@@ -11,6 +11,7 @@ using System.Data.SqlClient;
 
 using Asynq.Queries;
 using Asynq.ParameterContainers;
+using System.Diagnostics;
 
 namespace Asynq
 {
@@ -56,6 +57,7 @@ namespace Asynq
             }
 
             {
+                Console.WriteLine("Opening tmp.sdf and querying...");
                 using (var db = new Tmp(@"tmp.sdf"))
                 {
                     var obsQuery = db.AsyncExecuteQuery(
@@ -63,7 +65,10 @@ namespace Asynq
                        ,new OneIDParameter<SampleID>(new SampleID { Value = 1 })
                     );
 
-                    obsQuery.First();
+                    obsQuery.ForEachAsync(cl => Console.WriteLine(cl.Code));
+                    
+                    var x1 = obsQuery.FirstOrDefault();
+                    Console.WriteLine("Completed");
                 }
             }
         }

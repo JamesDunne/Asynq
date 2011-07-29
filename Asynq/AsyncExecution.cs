@@ -93,6 +93,8 @@ namespace Asynq
             {
                 SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
 
+                Console.WriteLine(sqlcmd.CommandText);
+
                 return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(query, sqlcmd);
             }
             else if (cmd is SqlCommand)
@@ -123,6 +125,10 @@ namespace Asynq
                         // requirement to deal with fully-populated models and use the flattened
                         // class as-is. Benefit of this is querying only what you need to use but we
                         // lose the client-side implementation flexibility.
+
+                        // Use System.Reflection.Emit.AssemblyBuilder to generate a deflated type to
+                        // hold mapping information to/from the ElementType's nested properties.
+                        // Generate a method within to inflate to the exact ElementType.
 
                         // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
                         var results = db.Translate(st.Query.Query.ElementType, dr);
