@@ -8,13 +8,13 @@ namespace Asynq.ParameterContainers
     /// <summary>
     /// A parameter container which contains a single identifier type.
     /// </summary>
-    /// <typeparam name="Tid"></typeparam>
-    public struct SingleIdentifierParameters<Tid>
-        where Tid : IModelIdentifier
+    /// <typeparam name="T1"></typeparam>
+    public struct OneIDParameter<T1>
+        where T1 : IModelIdentifier
     {
-        public readonly Tid ID;
+        public readonly T1 ID;
 
-        public SingleIdentifierParameters(Tid id)
+        public OneIDParameter(T1 id)
         {
             ID = id;
         }

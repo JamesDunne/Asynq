@@ -36,9 +36,9 @@ namespace Asynq.Queries
                ,row => row.i.ToString()
             );
 
-        public QueryDescriptor<SingleIdentifierParameters<SampleID>, DataContext, Sample>
+        public QueryDescriptor<OneIDParameter<SampleID>, DataContext, Sample>
             GetSampleByID = Query.Describe(
-                (SingleIdentifierParameters<SampleID> p, DataContext db) =>
+                (OneIDParameter<SampleID> p, DataContext db) =>
 
                     from i in Enumerable.Range(0, 100).AsQueryable()
                     where i == p.ID.Value
@@ -46,6 +46,17 @@ namespace Asynq.Queries
 
                 // NOTE that the second parameter here is omitted for identity conversions, i.e. the raw IQueryable returns
                 // the type requested without any required conversions or mappings.
+            );
+
+        public QueryDescriptor<OneIDParameter<SampleID>, Tmp, Class>
+            GetClassByID = Query.Describe(
+                (OneIDParameter<SampleID> p, Tmp db) =>
+
+                    from cl in db.Class
+                    where cl.ID == p.ID.Value
+                    select new { cl }
+
+               ,row => row.cl
             );
     }
 }
