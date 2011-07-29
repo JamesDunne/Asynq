@@ -23,15 +23,15 @@ namespace Asynq
                 // Get a sample QueryDescriptor to play with:
                 var sampleDescriptor = SampleQueryDescriptors.Default.GetIntsFrom0to99;
                 // Instruct the descriptor to build its IQueryable:
-                var sampleQuery = sampleDescriptor.BuildQuery(NoParameters.Default, null);
+                var sampleQuery = sampleDescriptor.Construct(null, NoParameters.Default);
 
                 // Lets display that IQueryable's Expression:
-                Console.WriteLine(sampleQuery.Expression.ToString());
+                Console.WriteLine(sampleQuery.Query.Expression.ToString());
 
                 // Enumerate the query, projecting each row to its final type:
-                foreach (object row in sampleQuery)
+                foreach (object row in sampleQuery.Query)
                 {
-                    var projected = sampleDescriptor.RowProjection(row);
+                    var projected = sampleQuery.RowProjection(row);
 
                     Console.WriteLine("  {0}", projected);
                 }
@@ -41,22 +41,22 @@ namespace Asynq
             {
                 var sampleDescriptor = SampleQueryDescriptors.Default.GetSampleByID;
                 // Instruct the descriptor to build its IQueryable:
-                var sampleQuery = sampleDescriptor.BuildQuery(new OneIDParameter<SampleID>(new SampleID { Value = 15 }), null);
+                var sampleQuery = sampleDescriptor.Construct(null, new OneIDParameter<SampleID>(new SampleID { Value = 15 }));
 
                 // Lets display that IQueryable's Expression:
-                Console.WriteLine(sampleQuery.Expression.ToString());
+                Console.WriteLine(sampleQuery.Query.Expression.ToString());
 
                 // Enumerate the query, projecting each row to its final type:
-                foreach (object row in sampleQuery)
+                foreach (object row in sampleQuery.Query)
                 {
-                    var projected = sampleDescriptor.RowProjection(row);
+                    var projected = sampleQuery.RowProjection(row);
 
                     Console.WriteLine("  {0}", projected.ID.Value);
                 }
             }
 
             {
-                using (var db = new Tmp(@""))
+                using (var db = new Tmp(@"tmp.sdf"))
                 {
                     var obsQuery = db.AsyncExecuteQuery(
                         SampleQueryDescriptors.Default.GetClassByID

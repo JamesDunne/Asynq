@@ -12,16 +12,42 @@ namespace Asynq
         where Tcontext : System.Data.Linq.DataContext
         where Tresult : class
     {
-        public Func<Tparameters, Tcontext, IQueryable> BuildQuery { get; private set; }
-        public Converter<object, Tresult> RowProjection { get; private set; }
+        private Func<Tparameters, Tcontext, IQueryable> buildQuery;
+        private Converter<object, Tresult> rowProjection;
 
         internal QueryDescriptor(
             Func<Tparameters, Tcontext, IQueryable> buildQuery
            ,Converter<object, Tresult> converter
         )
         {
-            this.BuildQuery = buildQuery;
-            this.RowProjection = converter;
+            this.buildQuery = buildQuery;
+            this.rowProjection = converter;
+        }
+
+        public ConstructedQuery<Tparameters, Tcontext, Tresult> Construct(Tcontext context, Tparameters parameters)
+        {
+            return new ConstructedQuery<Tparameters, Tcontext, Tresult>(this, context, buildQuery(parameters, context), parameters, rowProjection);
+        }
+    }
+
+    public sealed class ConstructedQuery<Tparameters, Tcontext, Tresult>
+        where Tparameters : struct
+        where Tcontext : System.Data.Linq.DataContext
+        where Tresult : class
+    {
+        public QueryDescriptor<Tparameters, Tcontext, Tresult> Descriptor { get; private set; }
+        public Tcontext Context { get; private set; }
+        public IQueryable Query { get; private set; }
+        public Tparameters Parameters { get; private set; }
+        public Converter<object, Tresult> RowProjection { get; private set; }
+
+        internal ConstructedQuery(QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tcontext context, IQueryable query, Tparameters parameters, Converter<object, Tresult> rowProjection)
+        {
+            this.Descriptor = descriptor;
+            this.Context = context;
+            this.Query = query;
+            this.Parameters = parameters;
+            this.RowProjection = rowProjection;
         }
     }
 

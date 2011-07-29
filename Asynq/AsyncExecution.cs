@@ -6,6 +6,9 @@ using System.Text;
 
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Data.SqlServerCe;
+using System.Data.Common;
+using System.Reactive.Disposables;
 
 namespace Asynq
 {
@@ -17,21 +20,62 @@ namespace Asynq
         // The Translate() method supports flat models only with unique column name
         // mappings, which might be a blessing in disguise.
 
-        private struct AsyncExecState<Tparameters, Tcontext, Tresult>
+        private struct AsyncSqlExecState<Tparameters, Tcontext, Tresult>
             where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
-            public SqlCommand Command;
-            public IQueryable Query;
-            public QueryDescriptor<Tparameters, Tcontext, Tresult> QueryDescriptor;
+            internal SqlCommand Command;
+            internal ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
 
-            public AsyncExecState(SqlCommand cmd, IQueryable query, QueryDescriptor<Tparameters, Tcontext, Tresult> queryDescriptor)
+            public AsyncSqlExecState(SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
             {
                 Command = cmd;
                 Query = query;
-                QueryDescriptor = queryDescriptor;
             }
+        }
+
+        private class AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult> : IObservable<Tresult>
+            where Tparameters : struct
+            where Tcontext : System.Data.Linq.DataContext
+            where Tresult : class
+        {
+            private SqlCeCommand Command;
+            private ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
+
+            public AsyncSqlCeExecutor(ConstructedQuery<Tparameters, Tcontext, Tresult> query, SqlCeCommand cmd)
+            {
+                Command = cmd;
+                Query = query;
+            }
+
+            #region IObservable<Tresult> Members
+
+            public IDisposable Subscribe(IObserver<Tresult> observer)
+            {
+                try
+                {
+                    Command.Connection.Open();
+
+                    using (var dr = Command.ExecuteReader())
+                    {
+                        foreach (object row in Query.Context.Translate(Query.Query.ElementType, dr))
+                        {
+                            Tresult tmp = Query.RowProjection(row);
+                            observer.OnNext(tmp);
+                        }
+                        observer.OnCompleted();
+                    }
+
+                    return Disposable.Empty;
+                }
+                finally
+                {
+                    Command.Connection.Close();
+                }
+            }
+
+            #endregion
         }
 
         // Attempt async execution:
@@ -40,65 +84,80 @@ namespace Asynq
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
-            // Instruct the descriptor to build its IQueryable:
-            var query = descriptor.BuildQuery(parameters, db);
-
-            AsyncSubject<Tresult> subj = new AsyncSubject<Tresult>();
+            var query = descriptor.Construct(db, parameters);
 
             // Assume the IQueryable was constructed via LINQ-to-SQL:
-            SqlCommand cmd = (SqlCommand)db.GetCommand(query);
+            DbCommand cmd = db.GetCommand(query.Query);
 
-            // Create the async completion callback:
-            AsyncCallback callback = delegate(IAsyncResult iar)
+            if (cmd is SqlCeCommand)
             {
-                var st = (AsyncExecState<Tparameters, Tcontext, Tresult>)iar.AsyncState;
+                SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
 
-                SqlDataReader dr = null;
+                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(query, sqlcmd);
+            }
+            else if (cmd is SqlCommand)
+            {
+                SqlCommand sqlcmd = (SqlCommand)cmd;
 
-                try
+                AsyncSubject<Tresult> subj = new AsyncSubject<Tresult>();
+
+                // Create the async completion callback:
+                AsyncCallback callback = delegate(IAsyncResult iar)
                 {
-                    // Get the data reader:
-                    dr = st.Command.EndExecuteReader(iar);
+                    var st = (AsyncSqlExecState<Tparameters, Tcontext, Tresult>)iar.AsyncState;
 
-                    // FIXME: serious problem here trying to map up complex element types.
-                    // How to get the appropriate column mapping? Possibly flatten out the
-                    // anonymous types to simple types with unique property names.
+                    SqlDataReader dr = null;
 
-                    // Probably will end up having to disallow anonymous types altogether and
-                    // code-gen a flattened class containing all properties from grouped models
-                    // that can then be expanded out to individual models, or just drop the
-                    // requirement to deal with fully-populated models and use the flattened
-                    // class as-is. Benefit of this is querying only what you need to use but we
-                    // lose the client-side implementation flexibility.
-
-                    // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
-                    var results = db.Translate(st.Query.ElementType, dr);
-                    foreach (object r in results)
+                    try
                     {
-                        subj.OnNext(st.QueryDescriptor.RowProjection(r));
+                        // Get the data reader:
+                        dr = st.Command.EndExecuteReader(iar);
+
+                        // FIXME: serious problem here trying to map up complex element types.
+                        // How to get the appropriate column mapping? Possibly flatten out the
+                        // anonymous types to simple types with unique property names.
+
+                        // Probably will end up having to disallow anonymous types altogether and
+                        // code-gen a flattened class containing all properties from grouped models
+                        // that can then be expanded out to individual models, or just drop the
+                        // requirement to deal with fully-populated models and use the flattened
+                        // class as-is. Benefit of this is querying only what you need to use but we
+                        // lose the client-side implementation flexibility.
+
+                        // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
+                        var results = db.Translate(st.Query.Query.ElementType, dr);
+                        foreach (object row in results)
+                        {
+                            Tresult tmp = st.Query.RowProjection(row);
+                            subj.OnNext(tmp);
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    subj.OnError(ex);
-                    return;
-                }
-                finally
-                {
-                    if (dr != null) dr.Dispose();
-                }
+                    catch (Exception ex)
+                    {
+                        subj.OnError(ex);
+                        return;
+                    }
+                    finally
+                    {
+                        if (dr != null) dr.Dispose();
+                    }
 
-                subj.OnCompleted();
-            };
+                    subj.OnCompleted();
+                };
 
-            // Start the async IO to the database:
-            cmd.BeginExecuteReader(
-                callback
-               ,new AsyncExecState<Tparameters, Tcontext, Tresult>(cmd, query, descriptor)
-               ,System.Data.CommandBehavior.CloseConnection
-            );
+                // Start the async IO to the database:
+                sqlcmd.BeginExecuteReader(
+                    callback
+                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(sqlcmd, query)
+                   ,System.Data.CommandBehavior.CloseConnection
+                );
 
-            return subj.AsObservable();
+                return subj.AsObservable();
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }
