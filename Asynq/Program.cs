@@ -19,6 +19,7 @@ namespace Asynq
     {
         static void Main(string[] args)
         {
+#if false
             // Example 1:
             {
                 // Get a sample QueryDescriptor to play with:
@@ -55,6 +56,7 @@ namespace Asynq
                     Console.WriteLine("  {0}", projected.ID.Value);
                 }
             }
+#endif
 
             {
                 Console.WriteLine("Opening tmp.sdf and querying...");
@@ -65,8 +67,8 @@ namespace Asynq
                        ,new OneIDParameter<SampleID>(new SampleID { Value = 1 })
                     );
 
-                    obsQuery.ForEachAsync(cl => Console.WriteLine(cl.Code));
-                    
+                    obsQuery.ForEachAsync(cl => Console.WriteLine(cl.Item1.Code));
+
                     var x1 = obsQuery.FirstOrDefault();
                     Console.WriteLine("Completed");
                 }

@@ -9,6 +9,8 @@ using System.Reactive.Subjects;
 using System.Data.SqlServerCe;
 using System.Data.Common;
 using System.Reactive.Disposables;
+using Asynq.CodeWriter;
+using System.Collections;
 
 namespace Asynq
 {
@@ -59,7 +61,14 @@ namespace Asynq
 
                     using (var dr = Command.ExecuteReader())
                     {
-                        foreach (object row in Query.Context.Translate(Query.Query.ElementType, dr))
+                        // TODO: reverse-engineer LINQ-to-SQL's exact column mapping policy and use that to translate
+                        // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
+                        // column mapping policy and is incompatible with anonymous types.
+
+                        // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
+                        IEnumerable rows = Query.Context.Translate(Query.Query.ElementType, dr);
+
+                        foreach (object row in rows)
                         {
                             Tresult tmp = Query.RowProjection(row);
                             observer.OnNext(tmp);
@@ -84,17 +93,28 @@ namespace Asynq
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
+            // Construct an IQueryable given the parameters and datacontext:
             var query = descriptor.Construct(db, parameters);
 
-            // Assume the IQueryable was constructed via LINQ-to-SQL:
+            // Get the DbCommand used to execute the query:
             DbCommand cmd = db.GetCommand(query.Query);
+
+#if DEBUG
+            // Dump the linq query to the console, colored:
+            Console.WriteLine();
+            var cw = new ConsoleColoredCodeWriter();
+            new Asynq.QueryProjector.LinqSyntaxExpressionFormatter(cw).WriteFormat(query.Query.Expression, Console.Out);
+            Console.WriteLine();
+
+            // Dump the SQL query:
+            Console.WriteLine();
+            Console.WriteLine(cmd.CommandText);
+            Console.WriteLine();
+#endif
 
             if (cmd is SqlCeCommand)
             {
                 SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
-
-                Console.WriteLine(sqlcmd.CommandText);
-
                 return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(query, sqlcmd);
             }
             else if (cmd is SqlCommand)
@@ -115,24 +135,14 @@ namespace Asynq
                         // Get the data reader:
                         dr = st.Command.EndExecuteReader(iar);
 
-                        // FIXME: serious problem here trying to map up complex element types.
-                        // How to get the appropriate column mapping? Possibly flatten out the
-                        // anonymous types to simple types with unique property names.
-
-                        // Probably will end up having to disallow anonymous types altogether and
-                        // code-gen a flattened class containing all properties from grouped models
-                        // that can then be expanded out to individual models, or just drop the
-                        // requirement to deal with fully-populated models and use the flattened
-                        // class as-is. Benefit of this is querying only what you need to use but we
-                        // lose the client-side implementation flexibility.
-
-                        // Use System.Reflection.Emit.AssemblyBuilder to generate a deflated type to
-                        // hold mapping information to/from the ElementType's nested properties.
-                        // Generate a method within to inflate to the exact ElementType.
+                        // TODO: reverse-engineer LINQ-to-SQL's exact column mapping policy and use that to translate
+                        // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
+                        // column mapping policy and is incompatible with anonymous types.
 
                         // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
-                        var results = db.Translate(st.Query.Query.ElementType, dr);
-                        foreach (object row in results)
+                        IEnumerable rows = st.Query.Context.Translate(st.Query.Query.ElementType, dr);
+
+                        foreach (object row in rows)
                         {
                             Tresult tmp = st.Query.RowProjection(row);
                             subj.OnNext(tmp);

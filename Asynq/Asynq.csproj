@@ -62,6 +62,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncExecution.cs" />
+    <Compile Include="CodeWriter\CodeWriterBase.cs" />
+    <Compile Include="CodeWriter\ConsoleColoredCodeWriter.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="ParameterContainers\NoParameters.cs" />
     <Compile Include="ParameterContainers\OneIDParameter.cs" />
     <Compile Include="Program.cs" />
@@ -69,6 +72,8 @@
     <Compile Include="IModelIdentifier.cs" />
     <Compile Include="Queries\SampleQueryDescriptors.cs" />
     <Compile Include="QueryDescriptor.cs" />
+    <Compile Include="QueryProjector\ExpressionVisitor.cs" />
+    <Compile Include="QueryProjector\LinqSyntaxExpressionFormatter.cs" />
     <Compile Include="tmp.designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -122,6 +127,7 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

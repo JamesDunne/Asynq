@@ -54,33 +54,24 @@ namespace Asynq.Queries
             public string Code1 { get; set; }
             public string Section1 { get; set; }
             public int? CourseID1 { get; set; }
+            public int? ID2 { get; set; }
 
             public WrapClass()
             {
             }
         }
 
-        public QueryDescriptor<OneIDParameter<SampleID>, Tmp, Class>
+        public QueryDescriptor<OneIDParameter<SampleID>, Tmp, Tuple<Class, Course>>
             GetClassByID = Query.Describe(
                 (OneIDParameter<SampleID> p, Tmp db) =>
 
                     from cl in db.Class
+                    join cr in db.Course on cl.CourseID equals cr.ID
                     where new int[] { 2, p.ID.Value }.Contains(cl.ID)
-                    select new WrapClass
-                    {
-                        ID1 = cl.ID,
-                        Code1 = cl.Code,
-                        Section1 = cl.Section,
-                        CourseID1 = cl.CourseID,
-                    }
+                    orderby cl.ID
+                    select new { cl, cr }
 
-               ,row => !row.ID1.HasValue ? null : new Class
-               {
-                   ID = row.ID1.Value,
-                   Code = row.Code1,
-                   Section = row.Section1,
-                   CourseID = row.CourseID1.Value
-               }
+               ,row => new Tuple<Class, Course>(row.cl, row.cr)
             );
     }
 }
