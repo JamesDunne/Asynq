@@ -67,8 +67,7 @@ namespace Asynq.Queries
 
                     from cl in db.Class
                     join cr in db.Course on cl.CourseID equals cr.ID
-                    where new int[] { 2, p.ID.Value }.Contains(cl.ID)
-                    orderby cl.ID
+                    where p.ID.Value == cl.ID
                     select new { cl, cr }
 
                ,row => new Tuple<Class, Course>(row.cl, row.cr)

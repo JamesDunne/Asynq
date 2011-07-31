@@ -11,6 +11,8 @@ using System.Data.Common;
 using System.Reactive.Disposables;
 using Asynq.CodeWriter;
 using System.Collections;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace Asynq
 {
@@ -65,6 +67,16 @@ namespace Asynq
                         // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
                         // column mapping policy and is incompatible with anonymous types.
 
+                        while (dr.Read())
+                        {
+                            int endOrdinal;
+                            object row = materializeType(Query.Query.ElementType, dr, 0, out endOrdinal);
+
+                            Tresult tmp = Query.RowProjection(row);
+                            observer.OnNext(tmp);
+                        }
+
+#if false
                         // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
                         IEnumerable rows = Query.Context.Translate(Query.Query.ElementType, dr);
 
@@ -73,6 +85,7 @@ namespace Asynq
                             Tresult tmp = Query.RowProjection(row);
                             observer.OnNext(tmp);
                         }
+#endif
                         observer.OnCompleted();
                     }
 
@@ -82,6 +95,42 @@ namespace Asynq
                 {
                     Command.Connection.Close();
                 }
+            }
+
+            private object materializeType(Type ty, DbDataReader dr, int startOrdinal, out int endOrdinal)
+            {
+                if (ty.Name.StartsWith("<>f__AnonymousType"))
+                {
+                    return materializeAnonymousType(ty, dr, startOrdinal, out endOrdinal);
+                }
+                else
+                {
+                    // Assume concrete type with writable properties:
+                    throw new NotImplementedException();
+                }
+            }
+
+            private object materializeAnonymousType(Type ty, DbDataReader dr, int startOrdinal, out int endOrdinal)
+            {
+                Debug.Assert(ty.IsGenericType);
+                
+                ConstructorInfo[] ctors = ty.GetConstructors();
+                Debug.Assert(ctors.Length == 1);
+
+                ParameterInfo[] prms = ctors[0].GetParameters();
+                object[] objs = new object[prms.Length];
+                
+                int currOrdinal = startOrdinal;
+                for (int i = 0; i < prms.Length; ++i)
+                {
+                    int lastOrdinal;
+                    // TODO: anonymous type with columns?
+                    objs[i] = materializeType(prms[i].ParameterType, dr, currOrdinal, out lastOrdinal);
+                    currOrdinal = lastOrdinal;
+                }
+                endOrdinal = currOrdinal;
+
+                return Activator.CreateInstance(ty, objs);
             }
 
             #endregion
