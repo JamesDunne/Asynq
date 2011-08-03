@@ -1,4 +1,5 @@
 Asynq - Asynchronous LINQ-to-SQL query execution framework
 
-
 This is very much a WORK IN PROGRESS. Do not use in ANY production code WHATSOEVER until this notice is removed.
+
+Requires System.Reactive v1.1 (experimental) from http://msdn.microsoft.com/en-us/data/gg577609
