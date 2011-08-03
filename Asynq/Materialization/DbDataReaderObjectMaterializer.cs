@@ -45,17 +45,19 @@ namespace Asynq.Materialization
                     return dr.GetValue(this.SourceOrdinal.Value);
                 }
 
+                int childCount = Children.Count;
+
                 // Materialize the children:
-                object[] childValues = new object[Children.Count];
-                for (int i = 0; i < childValues.Length; ++i)
+                object[] childValues = new object[childCount];
+                for (int i = 0; i < childCount; ++i)
                 {
-                    childValues[i] = Children[i].Materialize(dr);
+                    int j = childCount - 1 - i;
+                    childValues[j] = Children[i].Materialize(dr);
                 }
 
                 if (Children[0] is CtorParameterMaterializationState)
                 {
-                    // Use the ctor with the materialized parameters:
-                    // FIXME!!! Does not work for anonymous types...
+                    // Use the ctor with the materialized parameter values:
                     return Activator.CreateInstance(this.Type, childValues);
                 }
                 else
@@ -63,12 +65,13 @@ namespace Asynq.Materialization
                     // Use a default ctor to create this object and assigned property values:
                     object curr = Activator.CreateInstance(this.Type);
 
-                    for (int i = 0; i < childValues.Length; ++i)
+                    for (int i = 0; i < childCount; ++i)
                     {
+                        int j = childCount - 1 - i;
                         Debug.Assert(Children[i] is PropertyMaterializationState);
 
                         PropertyMaterializationState pstate = (PropertyMaterializationState)Children[i];
-                        pstate.PropertyInfo.SetValue(curr, childValues[i], null);
+                        pstate.PropertyInfo.SetValue(curr, childValues[j], null);
                     }
 
                     return curr;
