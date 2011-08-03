@@ -14,6 +14,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using Asynq.Materialization;
+using System.Threading;
 
 namespace Asynq
 {
@@ -30,61 +31,61 @@ namespace Asynq
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
+            internal Tcontext Context;
             internal SqlCommand Command;
             internal ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
 
-            public AsyncSqlExecState(SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
+            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
             {
+                Context = context;
                 Command = cmd;
                 Query = query;
             }
         }
 
-        private class AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult> : IObservable<Tresult>
+        private class AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult> : IObservable<List<Tresult>>
             where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
+            private Tcontext Context;
             private SqlCeCommand Command;
             private ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
 
-            public AsyncSqlCeExecutor(ConstructedQuery<Tparameters, Tcontext, Tresult> query, SqlCeCommand cmd)
+            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
             {
+                Context = context;
                 Command = cmd;
                 Query = query;
             }
 
             #region IObservable<Tresult> Members
 
-            public IDisposable Subscribe(IObserver<Tresult> observer)
+            public IDisposable Subscribe(IObserver<List<Tresult>> observer)
             {
                 try
                 {
-                    Command.Connection.Open();
+                    Debug.Assert(Command.Connection != null);
+                    Debug.Assert(Command.Connection.State == System.Data.ConnectionState.Open);
+                    //Command.Connection.Open();
 
                     using (var dr = Command.ExecuteReader())
                     {
                         var materializer = new DbDataReaderObjectMaterializer();
                         var mapping = materializer.BuildMaterializationMapping(Query.Query.ElementType, dr);
 
+                        // Build a List so we can get out of here as soon as possible:
+                        List<Tresult> items = new List<Tresult>();
                         while (dr.Read())
                         {
                             object row = materializer.Materialize(mapping);
 
                             Tresult tmp = Query.RowProjection(row);
-                            observer.OnNext(tmp);
+                            items.Add(tmp);
                         }
 
-#if false
-                        // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
-                        IEnumerable rows = Query.Context.Translate(Query.Query.ElementType, dr);
-
-                        foreach (object row in rows)
-                        {
-                            Tresult tmp = Query.RowProjection(row);
-                            observer.OnNext(tmp);
-                        }
-#endif
+                        // Cave Johnson. We're done here.
+                        observer.OnNext(items);
                         observer.OnCompleted();
                     }
 
@@ -93,6 +94,7 @@ namespace Asynq
                 finally
                 {
                     Command.Connection.Close();
+                    Context.Dispose();
                 }
             }
 
@@ -100,11 +102,13 @@ namespace Asynq
         }
 
         // Attempt async execution:
-        public static IObservable<Tresult> AsyncExecuteQuery<Tparameters, Tcontext, Tresult>(this Tcontext db, QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tparameters parameters)
+        public static IObservable<List<Tresult>> AsyncExecuteQuery<Tparameters, Tcontext, Tresult>(this Func<Tcontext> createContext, QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tparameters parameters)
             where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
         {
+            var db = createContext();
+
             // Construct an IQueryable given the parameters and datacontext:
             var query = descriptor.Construct(db, parameters);
 
@@ -120,24 +124,35 @@ namespace Asynq
 
             // Dump the SQL query:
             Console.WriteLine();
+            foreach (DbParameter prm in cmd.Parameters)
+            {
+                Console.WriteLine("SET {0} = {1};", prm.ParameterName, prm.Value);
+            }
+            Console.WriteLine();
             Console.WriteLine(cmd.CommandText);
             Console.WriteLine();
 #endif
 
+            // Connection must be unique per DataContext instead:
+            cmd.Connection.Open();
+
             if (cmd is SqlCeCommand)
             {
                 SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
-                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(query, sqlcmd);
+                
+                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(db, sqlcmd, query);
             }
             else if (cmd is SqlCommand)
             {
                 SqlCommand sqlcmd = (SqlCommand)cmd;
 
-                AsyncSubject<Tresult> subj = new AsyncSubject<Tresult>();
+                AsyncSubject<List<Tresult>> subj = new AsyncSubject<List<Tresult>>();
 
                 // Create the async completion callback:
                 AsyncCallback callback = delegate(IAsyncResult iar)
                 {
+                    Console.WriteLine("Ending async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
+
                     var st = (AsyncSqlExecState<Tparameters, Tcontext, Tresult>)iar.AsyncState;
 
                     SqlDataReader dr = null;
@@ -150,13 +165,17 @@ namespace Asynq
                         var materializer = new DbDataReaderObjectMaterializer();
                         var mapping = materializer.BuildMaterializationMapping(st.Query.Query.ElementType, dr);
 
+                        // Build a List so we can get out of here as soon as possible:
+                        List<Tresult> items = new List<Tresult>();
                         while (dr.Read())
                         {
                             object row = materializer.Materialize(mapping);
 
                             Tresult tmp = st.Query.RowProjection(row);
-                            subj.OnNext(tmp);
+                            items.Add(tmp);
                         }
+
+                        subj.OnNext(items);
                     }
                     catch (Exception ex)
                     {
@@ -166,15 +185,21 @@ namespace Asynq
                     finally
                     {
                         if (dr != null) dr.Dispose();
+                        st.Context.Dispose();
                     }
 
                     subj.OnCompleted();
                 };
 
+                Debug.Assert(sqlcmd.Connection != null);
+                Debug.Assert(sqlcmd.Connection.State == System.Data.ConnectionState.Open);
+                //sqlcmd.Connection.Open();
+
                 // Start the async IO to the database:
+                Console.WriteLine("Beginning async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
                 sqlcmd.BeginExecuteReader(
                     callback
-                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(sqlcmd, query)
+                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(db, sqlcmd, query)
                    ,System.Data.CommandBehavior.CloseConnection
                 );
 

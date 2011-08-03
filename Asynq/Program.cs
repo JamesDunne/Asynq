@@ -20,6 +20,8 @@ namespace Asynq
     {
         static void Main(string[] args)
         {
+            Console.WriteLine("Press a key to begin.");
+            Console.ReadKey();
 #if false
             // Example 1:
             {
@@ -60,28 +62,49 @@ namespace Asynq
 #endif
 
             {
-                Console.WriteLine("Opening tmp.sdf and querying...");
-                using (var db = new Tmp(@"tmp.sdf"))
+                //const string connString = @"tmp.sdf";
+                const string connString = @"Data Source=.\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=SSPI;Asynchronous Processing=true";
+
+                Console.WriteLine("Opening '{0}' and querying...", connString);
+
+                Func<Tmp> createContext = () => new Tmp(connString);
+                
                 {
-                    var obsQuery = db.AsyncExecuteQuery(
+                    var obsQuery = createContext.AsyncExecuteQuery(
                         SampleQueryDescriptors.Default.GetClassByID
                        ,new OneIDParameter<SampleID>(new SampleID { Value = 1 })
                     );
 
-                    Console.WriteLine("Awaiting...");
-                    obsQuery.ForEachAsync(cl =>
+                    var obsQuery2 = createContext.AsyncExecuteQuery(
+                        SampleQueryDescriptors.Default.GetClassByID
+                       ,new OneIDParameter<SampleID>(new SampleID { Value = 2 })
+                    );
+
+                    var obsQuery3 = createContext.AsyncExecuteQuery(
+                        SampleQueryDescriptors.Default.GetClassByID
+                       ,new OneIDParameter<SampleID>(new SampleID { Value = 3 })
+                    );
+
+                    Console.WriteLine("Awaiting on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
+                    obsQuery.ForEachAsync(rows =>
                         {
-                            Console.WriteLine(
-                                "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}"
-                                , cl.Item1.ID, cl.Item1.Code, cl.Item1.Section, cl.Item1.CourseID
-                                , cl.Item2.ID, cl.Item2.Code, cl.Item2.Name
-                            );
+                            foreach (var row in rows)
+                            {
+                                Console.WriteLine(
+                                    "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}"
+                                    , row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
+                                    , row.Item2.ID, row.Item2.Code, row.Item2.Name
+                                );
+                            }
                         }
                     ).Wait();
 
                     Console.WriteLine("Completed");
                 }
             }
+
+            Console.WriteLine("Press a key to end.");
+            Console.ReadKey();
         }
     }
 }
