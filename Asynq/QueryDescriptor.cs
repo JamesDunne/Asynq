@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Asynq
+namespace AsynqFramework
 {
     /// <summary>
     /// Contains the metadata necessary for describing a query.

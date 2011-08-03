@@ -9,39 +9,22 @@ using System.Reactive.Subjects;
 using System.Data.SqlServerCe;
 using System.Data.Common;
 using System.Reactive.Disposables;
-using Asynq.CodeWriter;
+using AsynqFramework.CodeWriter;
 using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
-using Asynq.Materialization;
+using AsynqFramework.Materialization;
 using System.Threading;
 
-namespace Asynq
+namespace AsynqFramework
 {
-    public static class AsyncExecution
+    public static class Asynq
     {
         // NOTE: EF currently does not support async IO. Terrible. Back to LINQ-to-SQL.
         // LINQ-to-SQL is a bit better in this area, but not by much. We have a problem
         // in that we cannot select anonymous / complex mapped types via LINQ queries.
         // The Translate() method supports flat models only with unique column name
         // mappings, which might be a blessing in disguise.
-
-        private struct AsyncSqlExecState<Tparameters, Tcontext, Tresult>
-            where Tparameters : struct
-            where Tcontext : System.Data.Linq.DataContext
-            where Tresult : class
-        {
-            internal Tcontext Context;
-            internal SqlCommand Command;
-            internal ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
-
-            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
-            {
-                Context = context;
-                Command = cmd;
-                Query = query;
-            }
-        }
 
         private class AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult> : IObservable<List<Tresult>>
             where Tparameters : struct
@@ -51,12 +34,15 @@ namespace Asynq
             private Tcontext Context;
             private SqlCeCommand Command;
             private ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
+            private int ExpectedCount;
 
-            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query)
+            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query, int expectedCount = 10)
             {
-                Context = context;
-                Command = cmd;
-                Query = query;
+                this.Context = context;
+                this.Command = cmd;
+                this.Query = query;
+                Debug.Assert(expectedCount >= 0);
+                this.ExpectedCount = expectedCount;
             }
 
             #region IObservable<Tresult> Members
@@ -75,7 +61,7 @@ namespace Asynq
                         var mapping = materializer.BuildMaterializationMapping(Query.Query.ElementType, dr);
 
                         // Build a List so we can get out of here as soon as possible:
-                        List<Tresult> items = new List<Tresult>();
+                        List<Tresult> items = new List<Tresult>(ExpectedCount);
                         while (dr.Read())
                         {
                             object row = materializer.Materialize(mapping);
@@ -101,8 +87,28 @@ namespace Asynq
             #endregion
         }
 
+        private struct AsyncSqlExecState<Tparameters, Tcontext, Tresult>
+            where Tparameters : struct
+            where Tcontext : System.Data.Linq.DataContext
+            where Tresult : class
+        {
+            internal Tcontext Context;
+            internal SqlCommand Command;
+            internal ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
+            internal int ExpectedCount;
+
+            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query, int expectedCount = 10)
+            {
+                Context = context;
+                Command = cmd;
+                Query = query;
+                Debug.Assert(expectedCount >= 0);
+                ExpectedCount = expectedCount;
+            }
+        }
+
         // Attempt async execution:
-        public static IObservable<List<Tresult>> AsyncExecuteQuery<Tparameters, Tcontext, Tresult>(this Func<Tcontext> createContext, QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tparameters parameters)
+        public static IObservable<List<Tresult>> ExecuteQuery<Tparameters, Tcontext, Tresult>(Func<Tcontext> createContext, QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tparameters parameters, int expectedCount = 10)
             where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
             where Tresult : class
@@ -133,14 +139,14 @@ namespace Asynq
             Console.WriteLine();
 #endif
 
-            // Connection must be unique per DataContext instead:
+            // Connection must be unique per DataContext:
             cmd.Connection.Open();
 
             if (cmd is SqlCeCommand)
             {
                 SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
-                
-                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(db, sqlcmd, query);
+
+                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(db, sqlcmd, query, expectedCount);
             }
             else if (cmd is SqlCommand)
             {
@@ -166,7 +172,7 @@ namespace Asynq
                         var mapping = materializer.BuildMaterializationMapping(st.Query.Query.ElementType, dr);
 
                         // Build a List so we can get out of here as soon as possible:
-                        List<Tresult> items = new List<Tresult>();
+                        List<Tresult> items = new List<Tresult>(st.ExpectedCount);
                         while (dr.Read())
                         {
                             object row = materializer.Materialize(mapping);
@@ -196,10 +202,9 @@ namespace Asynq
                 //sqlcmd.Connection.Open();
 
                 // Start the async IO to the database:
-                Console.WriteLine("Beginning async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
                 sqlcmd.BeginExecuteReader(
                     callback
-                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(db, sqlcmd, query)
+                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(db, sqlcmd, query, expectedCount)
                    ,System.Data.CommandBehavior.CloseConnection
                 );
 

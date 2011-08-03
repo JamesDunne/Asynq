@@ -6,7 +6,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Asynq.Materialization
+namespace AsynqFramework.Materialization
 {
     public sealed class DbDataReaderObjectMaterializer : IObjectMaterializer<DbDataReader>
     {

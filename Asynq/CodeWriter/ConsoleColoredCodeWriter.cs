@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-namespace Asynq.CodeWriter
+namespace AsynqFramework.CodeWriter
 {
     public class ConsoleColoredCodeWriter : CodeWriterBase
     {

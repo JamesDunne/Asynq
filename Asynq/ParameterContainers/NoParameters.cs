@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Asynq.ParameterContainers
+namespace AsynqFramework.ParameterContainers
 {
     /// <summary>
     /// Nonce parameter container.

@@ -20,9 +20,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.IO;
-using Asynq.CodeWriter;
+using AsynqFramework.CodeWriter;
 
-namespace Asynq.QueryProjector
+namespace AsynqFramework.QueryProjector
 {
     /// <summary>
     /// A lambda expression formatter which attempts to format the expression tree back into

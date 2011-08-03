@@ -2,13 +2,16 @@
 using System.Data.Linq;
 using System.Linq;
 
-using Asynq.ParameterContainers;
+using AsynqFramework.ParameterContainers;
 
-namespace Asynq.Queries
+namespace AsynqFramework.Queries
 {
     #region Dummy supporting types for sample code
 
     public struct SampleID : IModelIdentifier { public int Value { get; set; } }
+    public struct ClassID : IModelIdentifier { public int Value { get; set; } }
+    public struct CourseID : IModelIdentifier { public int Value { get; set; } }
+
     public sealed class Sample { public SampleID ID { get; set; } }
     
     #endregion
@@ -61,9 +64,9 @@ namespace Asynq.Queries
             }
         }
 
-        public QueryDescriptor<OneIDParameter<SampleID>, Tmp, Tuple<Class, Course>>
+        public QueryDescriptor<OneIDParameter<ClassID>, Tmp, Tuple<Class, Course>>
             GetClassByID = Query.Describe(
-                (OneIDParameter<SampleID> p, Tmp db) =>
+                (OneIDParameter<ClassID> p, Tmp db) =>
 
                     from cl in db.Class
                     join cr in db.Course on cl.CourseID equals cr.ID
@@ -71,6 +74,15 @@ namespace Asynq.Queries
                     select new { cl, cr }
 
                ,row => row == null ? null : new Tuple<Class, Course>(row.cl, row.cr)
+            );
+
+        public QueryDescriptor<OneIDParameter<CourseID>, Tmp, Course>
+            GetCourseByID = Query.Describe(
+                (OneIDParameter<CourseID> p, Tmp db) =>
+
+                    from cr in db.Course
+                    where p.ID.Value == cr.ID
+                    select cr
             );
     }
 }

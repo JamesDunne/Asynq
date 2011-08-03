@@ -9,12 +9,12 @@ using System.Reactive.Subjects;
 using System.Data.Linq;
 using System.Data.SqlClient;
 
-using Asynq.Queries;
-using Asynq.ParameterContainers;
+using AsynqFramework.Queries;
+using AsynqFramework.ParameterContainers;
 using System.Diagnostics;
 using System.Threading;
 
-namespace Asynq
+namespace AsynqFramework
 {
     class Program
     {
@@ -65,42 +65,42 @@ namespace Asynq
                 //const string connString = @"tmp.sdf";
                 const string connString = @"Data Source=.\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=SSPI;Asynchronous Processing=true";
 
+                var descriptors = SampleQueryDescriptors.Default;
+
                 Console.WriteLine("Opening '{0}' and querying...", connString);
 
-                Func<Tmp> createContext = () => new Tmp(connString);
-                
+                IObservable<List<Tuple<Class, Course>>>[] queries = new IObservable<List<Tuple<Class, Course>>>[20];
+                for (int i = 0; i < queries.Length; ++i)
                 {
-                    var obsQuery = createContext.AsyncExecuteQuery(
-                        SampleQueryDescriptors.Default.GetClassByID
-                       ,new OneIDParameter<SampleID>(new SampleID { Value = 1 })
+                    queries[i] = Asynq.ExecuteQuery(
+                        createContext:  () => new Tmp(connString)
+                       ,descriptor:     descriptors.GetClassByID
+                       ,parameters:     new OneIDParameter<ClassID>(new ClassID { Value = i + 1 })
+                       ,expectedCount:  1
                     );
-
-                    var obsQuery2 = createContext.AsyncExecuteQuery(
-                        SampleQueryDescriptors.Default.GetClassByID
-                       ,new OneIDParameter<SampleID>(new SampleID { Value = 2 })
-                    );
-
-                    var obsQuery3 = createContext.AsyncExecuteQuery(
-                        SampleQueryDescriptors.Default.GetClassByID
-                       ,new OneIDParameter<SampleID>(new SampleID { Value = 3 })
-                    );
-
-                    Console.WriteLine("Awaiting on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
-                    obsQuery.ForEachAsync(rows =>
-                        {
-                            foreach (var row in rows)
-                            {
-                                Console.WriteLine(
-                                    "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}"
-                                    , row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
-                                    , row.Item2.ID, row.Item2.Code, row.Item2.Name
-                                );
-                            }
-                        }
-                    ).Wait();
-
-                    Console.WriteLine("Completed");
                 }
+
+                Console.WriteLine("Awaiting on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
+
+                // Loop through the queries and pull back each one's results:
+                for (int i = 0; i < queries.Length; ++i)
+                {
+                    // First() is blocking here, but the query should most likely already be complete:
+                    var rows = queries[i].First();
+
+                    Console.WriteLine("#{0,3}) {1} items.", i + 1, rows.Count);
+                    foreach (var row in rows)
+                    {
+                        Console.WriteLine(
+                            "      {1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}"
+                            , (i + 1)
+                            , row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
+                            , row.Item2.ID, row.Item2.Code, row.Item2.Name
+                        );
+                    }
+                }
+
+                Console.WriteLine("Completed");
             }
 
             Console.WriteLine("Press a key to end.");

@@ -5,7 +5,7 @@ using System.Text;
 using System.Diagnostics;
 using System.IO;
 
-namespace Asynq.CodeWriter
+namespace AsynqFramework.CodeWriter
 {
     public class CodeWriterBase
     {

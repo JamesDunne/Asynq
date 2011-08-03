@@ -5,7 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
-namespace Asynq.QueryProjector
+namespace AsynqFramework.QueryProjector
 {
     public abstract class ExpressionVisitor
     {
