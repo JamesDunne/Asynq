@@ -1,0 +1,4 @@
+Asynq - Asynchronous LINQ-to-SQL query execution framework
+
+
+This is very much a WORK IN PROGRESS. Do not use in ANY production code WHATSOEVER until this notice is removed.
