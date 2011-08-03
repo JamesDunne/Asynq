@@ -64,10 +64,6 @@ namespace Asynq
 
                     using (var dr = Command.ExecuteReader())
                     {
-                        // TODO: reverse-engineer LINQ-to-SQL's exact column mapping policy and use that to translate
-                        // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
-                        // column mapping policy and is incompatible with anonymous types.
-
                         var materializer = new DbDataReaderObjectMaterializer();
                         var mapping = materializer.BuildMaterializationMapping(Query.Query.ElementType, dr);
 
@@ -151,15 +147,13 @@ namespace Asynq
                         // Get the data reader:
                         dr = st.Command.EndExecuteReader(iar);
 
-                        // TODO: reverse-engineer LINQ-to-SQL's exact column mapping policy and use that to translate
-                        // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
-                        // column mapping policy and is incompatible with anonymous types.
+                        var materializer = new DbDataReaderObjectMaterializer();
+                        var mapping = materializer.BuildMaterializationMapping(st.Query.Query.ElementType, dr);
 
-                        // Materialize the DbDataReader rows into objects of the proper element type per the IQueryable:
-                        IEnumerable rows = st.Query.Context.Translate(st.Query.Query.ElementType, dr);
-
-                        foreach (object row in rows)
+                        while (dr.Read())
                         {
+                            object row = materializer.Materialize(mapping);
+
                             Tresult tmp = st.Query.RowProjection(row);
                             subj.OnNext(tmp);
                         }

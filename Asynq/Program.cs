@@ -12,6 +12,7 @@ using System.Data.SqlClient;
 using Asynq.Queries;
 using Asynq.ParameterContainers;
 using System.Diagnostics;
+using System.Threading;
 
 namespace Asynq
 {
@@ -67,9 +68,17 @@ namespace Asynq
                        ,new OneIDParameter<SampleID>(new SampleID { Value = 1 })
                     );
 
-                    obsQuery.ForEachAsync(cl => Console.WriteLine(cl.Item1.Code));
+                    Console.WriteLine("Awaiting...");
+                    obsQuery.ForEachAsync(cl =>
+                        {
+                            Console.WriteLine(
+                                "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}"
+                                , cl.Item1.ID, cl.Item1.Code, cl.Item1.Section, cl.Item1.CourseID
+                                , cl.Item2.ID, cl.Item2.Code, cl.Item2.Name
+                            );
+                        }
+                    ).Wait();
 
-                    var x1 = obsQuery.FirstOrDefault();
                     Console.WriteLine("Completed");
                 }
             }

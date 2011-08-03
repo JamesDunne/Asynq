@@ -28,13 +28,8 @@ namespace Asynq.Materialization
                     parent.Children.Add(this);
             }
 
-            public virtual string Name
-            {
-                get
-                {
-                    return this.Type.FullName;
-                }
-            }
+            public virtual string Name { get { return this.Type.Name; } }
+            public virtual string FullName { get { return this.Type.FullName; } }
 
             internal object Materialize(DbDataReader dr)
             {
@@ -48,30 +43,35 @@ namespace Asynq.Materialization
                 int childCount = Children.Count;
 
                 // Materialize the children:
-                object[] childValues = new object[childCount];
+                object[] reverseChildValues = new object[childCount];
                 for (int i = 0; i < childCount; ++i)
                 {
-                    int j = childCount - 1 - i;
-                    childValues[j] = Children[i].Materialize(dr);
+                    int reverseI = childCount - 1 - i;
+                    
+                    reverseChildValues[reverseI] = Children[i].Materialize(dr);
                 }
 
                 if (Children[0] is CtorParameterMaterializationState)
                 {
                     // Use the ctor with the materialized parameter values:
-                    return Activator.CreateInstance(this.Type, childValues);
+
+                    // FIXME: what if additional properties are available to assign?
+                    return Activator.CreateInstance(this.Type, reverseChildValues);
                 }
                 else
                 {
                     // Use a default ctor to create this object and assigned property values:
+
+                    // FIXME: what if no default ctor available? Use combo approach of parameters and properties after-the-fact?
                     object curr = Activator.CreateInstance(this.Type);
 
                     for (int i = 0; i < childCount; ++i)
                     {
-                        int j = childCount - 1 - i;
+                        int reverseI = childCount - 1 - i;
                         Debug.Assert(Children[i] is PropertyMaterializationState);
 
                         PropertyMaterializationState pstate = (PropertyMaterializationState)Children[i];
-                        pstate.PropertyInfo.SetValue(curr, childValues[j], null);
+                        pstate.PropertyInfo.SetValue(curr, reverseChildValues[reverseI], null);
                     }
 
                     return curr;
@@ -89,13 +89,8 @@ namespace Asynq.Materialization
                 this.ParameterInfo = parameterInfo;
             }
 
-            public override string Name
-            {
-                get
-                {
-                    return this.Parent.Name + "!" + this.ParameterInfo.Name;
-                }
-            }
+            public override string Name { get { return this.ParameterInfo.Name; } }
+            public override string FullName { get { return this.Parent.FullName + "!" + this.Name; } }
         }
 
         private class PropertyMaterializationState : MaterializationState
@@ -108,13 +103,8 @@ namespace Asynq.Materialization
                 this.PropertyInfo = propertyInfo;
             }
 
-            public override string Name
-            {
-                get
-                {
-                    return this.Parent.Name + "." + this.PropertyInfo.Name;
-                }
-            }
+            public override string Name { get { return this.PropertyInfo.Name; } }
+            public override string FullName { get { return this.Parent.FullName + "." + this.Name; } }
         }
 
         private class DbDataReaderObjectMaterializationMapping : IObjectMaterializationMapping<DbDataReader>
@@ -159,7 +149,7 @@ namespace Asynq.Materialization
                         stk.Push(new CtorParameterMaterializationState(prms[i].ParameterType, state, prms[i]));
                     }
                 }
-                else if (state.Type.IsClass && !state.Type.IsAbstract && !state.Type.IsPrimitive && (state.Type != typeof(string)))
+                else if (!state.Type.IsPrimitive && state.Type.IsClass && !state.Type.IsAbstract && (state.Type != typeof(string)))
                 {
                     // Enumerate public writable properties in reverse declaration order (for stack):
                     var props = state.Type.GetProperties();
@@ -169,11 +159,26 @@ namespace Asynq.Materialization
                         stk.Push(new PropertyMaterializationState(props[i].PropertyType, state, props[i]));
                     }
                 }
+                else if (!state.Type.IsPrimitive && state.Type.IsValueType && !state.Type.IsAbstract)
+                {
+                    // Figure something out here; probably assigning writable properties again.
+                    throw new NotImplementedException();
+                }
                 else
                 {
-                    // Assume a primitive type that can be read directly off the DbDataReader:
+                    // Assume a primitive type that can be read directly off the DbDataReader with GetValue(int).
+
+                    // Assume the columns are ordered by property/parameter declaration order.
+                    // Assume that all properties/parameters declared have a column to map to.
+                    // TODO: Pick up the TEST bit columns used to generate null references with.
+                    
+                    Debug.Assert(dataSource.GetName(ord).StartsWith(state.Name, StringComparison.OrdinalIgnoreCase));
+
                     state.SourceOrdinal = ord++;
-                    Debug.WriteLine("{0}) \"{1}\" -> `{2}`", state.SourceOrdinal, dataSource.GetName(state.SourceOrdinal.Value), state.Name);
+
+                    // NOTE: We can do better via the naming convention of `ColumnName###` where `###` is an integer value
+                    // used to distinguish between repeated usages of the same column name. Simply tracking the incrementing
+                    // integer values per column name by moving forward through the ordinals should work.
                 }
             }
 
