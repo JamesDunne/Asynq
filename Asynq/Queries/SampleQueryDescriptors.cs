@@ -70,7 +70,7 @@ namespace Asynq.Queries
                     where p.ID.Value == cl.ID
                     select new { cl, cr }
 
-               ,row => new Tuple<Class, Course>(row.cl, row.cr)
+               ,row => row == null ? null : new Tuple<Class, Course>(row.cl, row.cr)
             );
     }
 }

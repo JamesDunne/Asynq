@@ -65,6 +65,8 @@
     <Compile Include="CodeWriter\CodeWriterBase.cs" />
     <Compile Include="CodeWriter\ConsoleColoredCodeWriter.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Materialization\IObjectMaterializationMapping.cs" />
+    <Compile Include="Materialization\IObjectMaterializer.cs" />
     <Compile Include="ParameterContainers\NoParameters.cs" />
     <Compile Include="ParameterContainers\OneIDParameter.cs" />
     <Compile Include="Program.cs" />
@@ -79,6 +81,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>tmp.dbml</DependentUpon>
     </Compile>
+    <Compile Include="Materialization\DbDataReaderObjectMaterializer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="tmp.sdf">

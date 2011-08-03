@@ -13,6 +13,7 @@ using Asynq.CodeWriter;
 using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
+using Asynq.Materialization;
 
 namespace Asynq
 {
@@ -67,10 +68,12 @@ namespace Asynq
                         // columns from the DbDataReader to the ElementType. `db.Translate()` does not use the same
                         // column mapping policy and is incompatible with anonymous types.
 
+                        var materializer = new DbDataReaderObjectMaterializer();
+                        var mapping = materializer.BuildMaterializationMapping(Query.Query.ElementType, dr);
+
                         while (dr.Read())
                         {
-                            int endOrdinal;
-                            object row = materializeType(Query.Query.ElementType, dr, 0, out endOrdinal);
+                            object row = materializer.Materialize(mapping);
 
                             Tresult tmp = Query.RowProjection(row);
                             observer.OnNext(tmp);
@@ -95,42 +98,6 @@ namespace Asynq
                 {
                     Command.Connection.Close();
                 }
-            }
-
-            private object materializeType(Type ty, DbDataReader dr, int startOrdinal, out int endOrdinal)
-            {
-                if (ty.Name.StartsWith("<>f__AnonymousType"))
-                {
-                    return materializeAnonymousType(ty, dr, startOrdinal, out endOrdinal);
-                }
-                else
-                {
-                    // Assume concrete type with writable properties:
-                    throw new NotImplementedException();
-                }
-            }
-
-            private object materializeAnonymousType(Type ty, DbDataReader dr, int startOrdinal, out int endOrdinal)
-            {
-                Debug.Assert(ty.IsGenericType);
-                
-                ConstructorInfo[] ctors = ty.GetConstructors();
-                Debug.Assert(ctors.Length == 1);
-
-                ParameterInfo[] prms = ctors[0].GetParameters();
-                object[] objs = new object[prms.Length];
-                
-                int currOrdinal = startOrdinal;
-                for (int i = 0; i < prms.Length; ++i)
-                {
-                    int lastOrdinal;
-                    // TODO: anonymous type with columns?
-                    objs[i] = materializeType(prms[i].ParameterType, dr, currOrdinal, out lastOrdinal);
-                    currOrdinal = lastOrdinal;
-                }
-                endOrdinal = currOrdinal;
-
-                return Activator.CreateInstance(ty, objs);
             }
 
             #endregion
