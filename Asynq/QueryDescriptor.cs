@@ -7,16 +7,16 @@ namespace AsynqFramework
     /// Contains the metadata necessary for describing a query.
     /// </summary>
     /// <typeparam name="Tresult"></typeparam>
-    public sealed class QueryDescriptor<Tparameters, Tcontext, Tresult>
-        where Tparameters : struct
+    public sealed class QueryDescriptor<Tcontext, Tparameters, Tresult>
         where Tcontext : System.Data.Linq.DataContext
+        where Tparameters : struct
         where Tresult : class
     {
-        private Func<Tparameters, Tcontext, IQueryable> buildQuery;
+        private Func<Tcontext, Tparameters, IQueryable> buildQuery;
         private Converter<object, Tresult> rowProjection;
 
         internal QueryDescriptor(
-            Func<Tparameters, Tcontext, IQueryable> buildQuery
+            Func<Tcontext, Tparameters, IQueryable> buildQuery
            ,Converter<object, Tresult> converter
         )
         {
@@ -24,24 +24,24 @@ namespace AsynqFramework
             this.rowProjection = converter;
         }
 
-        public ConstructedQuery<Tparameters, Tcontext, Tresult> Construct(Tcontext context, Tparameters parameters)
+        public ConstructedQuery<Tcontext, Tparameters, Tresult> Construct(Tcontext context, Tparameters parameters)
         {
-            return new ConstructedQuery<Tparameters, Tcontext, Tresult>(this, context, buildQuery(parameters, context), parameters, rowProjection);
+            return new ConstructedQuery<Tcontext, Tparameters, Tresult>(this, context, buildQuery(context, parameters), parameters, rowProjection);
         }
     }
 
-    public sealed class ConstructedQuery<Tparameters, Tcontext, Tresult>
-        where Tparameters : struct
+    public sealed class ConstructedQuery<Tcontext, Tparameters, Tresult>
         where Tcontext : System.Data.Linq.DataContext
+        where Tparameters : struct
         where Tresult : class
     {
-        public QueryDescriptor<Tparameters, Tcontext, Tresult> Descriptor { get; private set; }
+        public QueryDescriptor<Tcontext, Tparameters, Tresult> Descriptor { get; private set; }
         public Tcontext Context { get; private set; }
         public IQueryable Query { get; private set; }
         public Tparameters Parameters { get; private set; }
         public Converter<object, Tresult> RowProjection { get; private set; }
 
-        internal ConstructedQuery(QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tcontext context, IQueryable query, Tparameters parameters, Converter<object, Tresult> rowProjection)
+        internal ConstructedQuery(QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tcontext context, IQueryable query, Tparameters parameters, Converter<object, Tresult> rowProjection)
         {
             this.Descriptor = descriptor;
             this.Context = context;
@@ -54,28 +54,28 @@ namespace AsynqFramework
     public static class Query
     {
         // Dirty hack to support anonymous types for `Ttmp`.
-        public static QueryDescriptor<Tparameters, Tcontext, Tresult>
-            Describe<Ttmp, Tparameters, Tcontext, Tresult>(
-                Func<Tparameters, Tcontext, IQueryable<Ttmp>> buildQuery
+        public static QueryDescriptor<Tcontext, Tparameters, Tresult>
+            Describe<Ttmp, Tcontext, Tparameters, Tresult>(
+                Func<Tcontext, Tparameters, IQueryable<Ttmp>> buildQuery
                ,Converter<Ttmp, Tresult> converter
             )
-            where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
             where Tresult : class
         {
-            return new QueryDescriptor<Tparameters, Tcontext, Tresult>(buildQuery, row => converter((Ttmp)row));
+            return new QueryDescriptor<Tcontext, Tparameters, Tresult>(buildQuery, row => converter((Ttmp)row));
         }
 
-        public static QueryDescriptor<Tparameters, Tcontext, Tresult>
-            Describe<Tparameters, Tcontext, Tresult>(
-                Func<Tparameters, Tcontext, IQueryable<Tresult>> buildQuery
+        public static QueryDescriptor<Tcontext, Tparameters, Tresult>
+            Describe<Tcontext, Tparameters, Tresult>(
+                Func<Tcontext, Tparameters, IQueryable<Tresult>> buildQuery
             )
-            where Tparameters : struct
             where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
             where Tresult : class
         {
             // FIXME: unnecessary dangerous-looking but safe type cast in order to satisfy T -> object -> T.
-            return new QueryDescriptor<Tparameters, Tcontext, Tresult>(buildQuery, row => (Tresult)row);
+            return new QueryDescriptor<Tcontext, Tparameters, Tresult>(buildQuery, row => (Tresult)row);
         }
     }
 }

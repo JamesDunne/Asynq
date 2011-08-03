@@ -26,17 +26,17 @@ namespace AsynqFramework
         // The Translate() method supports flat models only with unique column name
         // mappings, which might be a blessing in disguise.
 
-        private class AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult> : IObservable<List<Tresult>>
-            where Tparameters : struct
+        private class AsyncSqlCeExecutor<Tcontext, Tparameters, Tresult> : IObservable<List<Tresult>>
             where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
             where Tresult : class
         {
             private Tcontext Context;
             private SqlCeCommand Command;
-            private ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
+            private ConstructedQuery<Tcontext, Tparameters, Tresult> Query;
             private int ExpectedCount;
 
-            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query, int expectedCount = 10)
+            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> query, int expectedCount = 10)
             {
                 this.Context = context;
                 this.Command = cmd;
@@ -87,17 +87,17 @@ namespace AsynqFramework
             #endregion
         }
 
-        private struct AsyncSqlExecState<Tparameters, Tcontext, Tresult>
-            where Tparameters : struct
+        private struct AsyncSqlExecState<Tcontext, Tparameters, Tresult>
             where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
             where Tresult : class
         {
             internal Tcontext Context;
             internal SqlCommand Command;
-            internal ConstructedQuery<Tparameters, Tcontext, Tresult> Query;
+            internal ConstructedQuery<Tcontext, Tparameters, Tresult> Query;
             internal int ExpectedCount;
 
-            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tparameters, Tcontext, Tresult> query, int expectedCount = 10)
+            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> query, int expectedCount = 10)
             {
                 Context = context;
                 Command = cmd;
@@ -108,9 +108,9 @@ namespace AsynqFramework
         }
 
         // Attempt async execution:
-        public static IObservable<List<Tresult>> ExecuteQuery<Tparameters, Tcontext, Tresult>(Func<Tcontext> createContext, QueryDescriptor<Tparameters, Tcontext, Tresult> descriptor, Tparameters parameters, int expectedCount = 10)
-            where Tparameters : struct
+        public static IObservable<List<Tresult>> ExecuteQuery<Tcontext, Tparameters, Tresult>(Func<Tcontext> createContext, QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tparameters parameters, int expectedCount = 10)
             where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
             where Tresult : class
         {
             var db = createContext();
@@ -146,7 +146,7 @@ namespace AsynqFramework
             {
                 SqlCeCommand sqlcmd = (SqlCeCommand)cmd;
 
-                return new AsyncSqlCeExecutor<Tparameters, Tcontext, Tresult>(db, sqlcmd, query, expectedCount);
+                return new AsyncSqlCeExecutor<Tcontext, Tparameters, Tresult>(db, sqlcmd, query, expectedCount);
             }
             else if (cmd is SqlCommand)
             {
@@ -159,7 +159,7 @@ namespace AsynqFramework
                 {
                     Console.WriteLine("Ending async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
 
-                    var st = (AsyncSqlExecState<Tparameters, Tcontext, Tresult>)iar.AsyncState;
+                    var st = (AsyncSqlExecState<Tcontext, Tparameters, Tresult>)iar.AsyncState;
 
                     SqlDataReader dr = null;
 
@@ -204,7 +204,7 @@ namespace AsynqFramework
                 // Start the async IO to the database:
                 sqlcmd.BeginExecuteReader(
                     callback
-                   ,new AsyncSqlExecState<Tparameters, Tcontext, Tresult>(db, sqlcmd, query, expectedCount)
+                   ,new AsyncSqlExecState<Tcontext, Tparameters, Tresult>(db, sqlcmd, query, expectedCount)
                    ,System.Data.CommandBehavior.CloseConnection
                 );
 

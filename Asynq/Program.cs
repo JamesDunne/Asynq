@@ -63,19 +63,23 @@ namespace AsynqFramework
 
             {
                 //const string connString = @"tmp.sdf";
+                
                 const string connString = @"Data Source=.\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=SSPI;Asynchronous Processing=true";
+                Console.WriteLine("Using '{0}'...", connString);
 
-                var descriptors = SampleQueryDescriptors.Default;
+                var descriptors = ClassQueryDescriptors.Default;
 
-                Console.WriteLine("Opening '{0}' and querying...", connString);
-
-                IObservable<List<Tuple<Class, Course>>>[] queries = new IObservable<List<Tuple<Class, Course>>>[20];
+                var queries = new IObservable<List<Tuple<Class, Course>>>[20];
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     queries[i] = Asynq.ExecuteQuery(
-                        createContext:  () => new Tmp(connString)
+                        // Pass a lambda used to instantiate a new data context per each query:
+                        createContext:  () => new ExampleDataContext(connString)
+                        // Give the query descriptor:
                        ,descriptor:     descriptors.GetClassByID
+                        // Give the parameter container struct:
                        ,parameters:     new OneIDParameter<ClassID>(new ClassID { Value = i + 1 })
+                        // Optional argument used to give an initial expected capacity of the result's List<T>:
                        ,expectedCount:  1
                     );
                 }
@@ -86,16 +90,16 @@ namespace AsynqFramework
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     // First() is blocking here, but the query should most likely already be complete:
-                    var rows = queries[i].First();
+                    List<Tuple<Class, Course>> rows = queries[i].First();
 
                     Console.WriteLine("#{0,3}) {1} items.", i + 1, rows.Count);
                     foreach (var row in rows)
                     {
                         Console.WriteLine(
                             "      {1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}"
-                            , (i + 1)
-                            , row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
-                            , row.Item2.ID, row.Item2.Code, row.Item2.Name
+                           ,(i + 1)
+                           ,row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
+                           ,row.Item2.ID, row.Item2.Code, row.Item2.Name
                         );
                     }
                 }

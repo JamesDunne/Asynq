@@ -9,8 +9,6 @@ namespace AsynqFramework.Queries
     #region Dummy supporting types for sample code
 
     public struct SampleID : IModelIdentifier { public int Value { get; set; } }
-    public struct ClassID : IModelIdentifier { public int Value { get; set; } }
-    public struct CourseID : IModelIdentifier { public int Value { get; set; } }
 
     public sealed class Sample { public SampleID ID { get; set; } }
     
@@ -20,15 +18,15 @@ namespace AsynqFramework.Queries
     {
         public static readonly SampleQueryDescriptors Default = new SampleQueryDescriptors();
 
-        // NOTE: Ideally separate out queries into one class per each Tresult type.
+        // NOTE: Ideally separate out queries into one container class per each Tresult type.
 
-        // NOTE: Obviously we would never use ObjectContext itself, but rather a code-generated derived class of it
+        // NOTE: Obviously we would never use DataContext itself, but rather a code-generated derived class of it
         // that describes our entity model.
 
-        public QueryDescriptor<NoParameters, DataContext, string>
+        public QueryDescriptor<DataContext, NoParameters, string>
             GetIntsFrom0to99 = Query.Describe(
                 // Describe the query as a function based on the input parameters and an ObjectContext-deriving class:
-                (NoParameters p, DataContext db) =>
+                (DataContext db, NoParameters p) =>
 
                     from i in Enumerable.Range(0, 100).AsQueryable()
                     select new { i }
@@ -39,9 +37,9 @@ namespace AsynqFramework.Queries
                ,row => row.i.ToString()
             );
 
-        public QueryDescriptor<OneIDParameter<SampleID>, DataContext, Sample>
+        public QueryDescriptor<DataContext, OneIDParameter<SampleID>, Sample>
             GetSampleByID = Query.Describe(
-                (OneIDParameter<SampleID> p, DataContext db) =>
+                (DataContext db, OneIDParameter<SampleID> p) =>
 
                     from i in Enumerable.Range(0, 100).AsQueryable()
                     where i == p.ID.Value
@@ -49,40 +47,6 @@ namespace AsynqFramework.Queries
 
                 // NOTE that the second parameter here is omitted for identity conversions, i.e. the raw IQueryable returns
                 // the type requested without any required conversions or mappings.
-            );
-
-        public sealed class WrapClass
-        {
-            public int? ID1 { get; set; }
-            public string Code1 { get; set; }
-            public string Section1 { get; set; }
-            public int? CourseID1 { get; set; }
-            public int? ID2 { get; set; }
-
-            public WrapClass()
-            {
-            }
-        }
-
-        public QueryDescriptor<OneIDParameter<ClassID>, Tmp, Tuple<Class, Course>>
-            GetClassByID = Query.Describe(
-                (OneIDParameter<ClassID> p, Tmp db) =>
-
-                    from cl in db.Class
-                    join cr in db.Course on cl.CourseID equals cr.ID
-                    where p.ID.Value == cl.ID
-                    select new { cl, cr }
-
-               ,row => row == null ? null : new Tuple<Class, Course>(row.cl, row.cr)
-            );
-
-        public QueryDescriptor<OneIDParameter<CourseID>, Tmp, Course>
-            GetCourseByID = Query.Describe(
-                (OneIDParameter<CourseID> p, Tmp db) =>
-
-                    from cr in db.Course
-                    where p.ID.Value == cr.ID
-                    select cr
             );
     }
 }

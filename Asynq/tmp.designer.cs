@@ -23,7 +23,7 @@ namespace AsynqFramework
 	
 	
 	[global::System.Data.Linq.Mapping.DatabaseAttribute(Name="tmp")]
-	public partial class Tmp : System.Data.Linq.DataContext
+	public partial class ExampleDataContext : System.Data.Linq.DataContext
 	{
 		
 		private static System.Data.Linq.Mapping.MappingSource mappingSource = new AttributeMappingSource();
@@ -38,25 +38,25 @@ namespace AsynqFramework
     partial void DeleteCourse(Course instance);
     #endregion
 		
-		public Tmp(string connection) : 
+		public ExampleDataContext(string connection) : 
 				base(connection, mappingSource)
 		{
 			OnCreated();
 		}
 		
-		public Tmp(System.Data.IDbConnection connection) : 
+		public ExampleDataContext(System.Data.IDbConnection connection) : 
 				base(connection, mappingSource)
 		{
 			OnCreated();
 		}
 		
-		public Tmp(string connection, System.Data.Linq.Mapping.MappingSource mappingSource) : 
+		public ExampleDataContext(string connection, System.Data.Linq.Mapping.MappingSource mappingSource) : 
 				base(connection, mappingSource)
 		{
 			OnCreated();
 		}
 		
-		public Tmp(System.Data.IDbConnection connection, System.Data.Linq.Mapping.MappingSource mappingSource) : 
+		public ExampleDataContext(System.Data.IDbConnection connection, System.Data.Linq.Mapping.MappingSource mappingSource) : 
 				base(connection, mappingSource)
 		{
 			OnCreated();

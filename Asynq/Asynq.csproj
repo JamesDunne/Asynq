@@ -105,6 +105,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="IModelIdentifier.cs" />
+    <Compile Include="Queries\ClassQueryDescriptors.cs" />
+    <Compile Include="Queries\CourseQueryDescriptors.cs" />
     <Compile Include="Queries\SampleQueryDescriptors.cs" />
     <Compile Include="QueryDescriptor.cs" />
     <Compile Include="QueryProjector\ExpressionVisitor.cs" />
