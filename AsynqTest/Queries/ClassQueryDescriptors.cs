@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using AsynqFramework.ParameterContainers;
+using AsynqFramework;
+using AsynqTest.ParameterContainers;
 
-namespace AsynqFramework.Queries
+namespace AsynqTest.Queries
 {
     public struct ClassID : IModelIdentifier { public int Value { get; set; } }
 
@@ -23,7 +24,7 @@ namespace AsynqFramework.Queries
                     from cl in db.Class
                     join cr in db.Course on cl.CourseID equals cr.ID
                     where p.ID.Value == cl.ID
-                    select new { cl, cr }
+                    select new { cl, cr /*, c = true, d = 1, e = 2, f = cr.ID*/ }
 
                ,row => new Tuple<Class, Course>(row.cl, row.cr)
             );

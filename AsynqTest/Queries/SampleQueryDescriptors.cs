@@ -2,9 +2,10 @@
 using System.Data.Linq;
 using System.Linq;
 
-using AsynqFramework.ParameterContainers;
+using AsynqFramework;
+using AsynqTest.ParameterContainers;
 
-namespace AsynqFramework.Queries
+namespace AsynqTest.Queries
 {
     #region Dummy supporting types for sample code
 

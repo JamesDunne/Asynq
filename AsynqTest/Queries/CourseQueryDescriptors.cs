@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using AsynqFramework.ParameterContainers;
+using AsynqFramework;
+using AsynqTest.ParameterContainers;
 
-namespace AsynqFramework.Queries
+namespace AsynqTest.Queries
 {
     public struct CourseID : IModelIdentifier { public int Value { get; set; } }
 

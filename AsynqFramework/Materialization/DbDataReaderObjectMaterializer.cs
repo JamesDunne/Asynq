@@ -171,7 +171,8 @@ namespace AsynqFramework.Materialization
                     // Assume the columns are ordered by property/parameter declaration order.
                     // Assume that all properties/parameters declared have a column to map to.
                     // TODO: Pick up the TEST bit columns used to generate null references with.
-                    
+
+                    Debug.Assert(ord < dataSource.FieldCount);
                     Debug.Assert(dataSource.GetName(ord).StartsWith(state.Name, StringComparison.OrdinalIgnoreCase));
 
                     state.SourceOrdinal = ord++;

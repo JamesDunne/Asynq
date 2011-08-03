@@ -1,20 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using System.Reactive;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using System.Data.Linq;
-using System.Data.SqlClient;
-
-using AsynqFramework.Queries;
-using AsynqFramework.ParameterContainers;
-using System.Diagnostics;
 using System.Threading;
+using AsynqFramework;
+using AsynqTest.ParameterContainers;
+using AsynqTest.Queries;
 
-namespace AsynqFramework
+namespace AsynqTest
 {
     class Program
     {

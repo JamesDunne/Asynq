@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace AsynqFramework
+namespace AsynqTest
 {
     public interface IModelIdentifier
     {

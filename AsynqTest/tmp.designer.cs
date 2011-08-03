@@ -9,7 +9,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace AsynqFramework
+namespace AsynqTest
 {
 	using System.Data.Linq;
 	using System.Data.Linq.Mapping;

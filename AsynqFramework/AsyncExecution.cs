@@ -125,7 +125,7 @@ namespace AsynqFramework
             // Dump the linq query to the console, colored:
             Console.WriteLine();
             var cw = new ConsoleColoredCodeWriter();
-            new Asynq.QueryProjector.LinqSyntaxExpressionFormatter(cw).WriteFormat(query.Query.Expression, Console.Out);
+            new AsynqFramework.QueryProjector.LinqSyntaxExpressionFormatter(cw).WriteFormat(query.Query.Expression, Console.Out);
             Console.WriteLine();
 
             // Dump the SQL query:
