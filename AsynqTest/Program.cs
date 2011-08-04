@@ -61,7 +61,7 @@ namespace AsynqTest
 
                 var descriptors = ClassQueryDescriptors.Default;
 
-                var queries = new IObservable<List<Tuple<Class, Course>>>[20];
+                var queries = new IObservable<List<Tuple<Class, Course>>>[1];
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     queries[i] = Asynq.ExecuteQuery(

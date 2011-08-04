@@ -23,8 +23,10 @@ namespace AsynqTest.Queries
 
                     from cl in db.Class
                     join cr in db.Course on cl.CourseID equals cr.ID
+                    join crBad in db.Course on cl.ID equals crBad.ID into crBadLJ
+                    from crBad in crBadLJ.DefaultIfEmpty()
                     where p.ID.Value == cl.ID
-                    select new { cl, cr /*, c = true, d = 1, e = 2, f = cr.ID*/ }
+                    select new { cl, cr, courseCount = db.Course.Count(), crBad /*, c = true, d = 1, e = 2, f = cr.ID*/ }
 
                ,row => new Tuple<Class, Course>(row.cl, row.cr)
             );

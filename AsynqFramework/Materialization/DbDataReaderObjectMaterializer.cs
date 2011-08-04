@@ -16,6 +16,8 @@ namespace AsynqFramework.Materialization
             public Type Type { get; set; }
             public int? SourceOrdinal { get; set; }
 
+            public int? NullTestOrdinal { get; set; }
+
             public List<MaterializationState> Children { get; private set; }
             public MaterializationState Parent { get; private set; }
 
@@ -38,6 +40,13 @@ namespace AsynqFramework.Materialization
                 {
                     Debug.Assert(this.SourceOrdinal.HasValue);
                     return dr.GetValue(this.SourceOrdinal.Value);
+                }
+
+                // Determine if we are null or not:
+                if (NullTestOrdinal.HasValue)
+                {
+                    if (dr.IsDBNull(NullTestOrdinal.Value))
+                        return null;
                 }
 
                 int childCount = Children.Count;
@@ -138,6 +147,12 @@ namespace AsynqFramework.Materialization
 
                 if (state.Type.Name.StartsWith("<>f__AnonymousType"))
                 {
+                    // Consume a 'test' bit column
+                    if (dataSource.GetName(ord).StartsWith("test") && (dataSource.GetFieldType(ord) == typeof(int)))
+                    {
+                        state.NullTestOrdinal = ord++;
+                    }
+
                     // Use ctor parameters for materializing anonymous types:
                     var ctors = state.Type.GetConstructors();
                     Debug.Assert(ctors.Length == 1);
@@ -151,6 +166,12 @@ namespace AsynqFramework.Materialization
                 }
                 else if (!state.Type.IsPrimitive && state.Type.IsClass && !state.Type.IsAbstract && (state.Type != typeof(string)))
                 {
+                    // Consume a 'test' bit column
+                    if (dataSource.GetName(ord).StartsWith("test") && (dataSource.GetFieldType(ord) == typeof(int)))
+                    {
+                        state.NullTestOrdinal = ord++;
+                    }
+
                     // Enumerate public writable properties in reverse declaration order (for stack):
                     var props = state.Type.GetProperties();
                     for (int i = props.Length - 1; i >= 0; --i)
