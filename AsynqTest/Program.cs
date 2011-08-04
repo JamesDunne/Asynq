@@ -5,6 +5,7 @@ using System.Threading;
 using AsynqFramework;
 using AsynqTest.ParameterContainers;
 using AsynqTest.Queries;
+using System.Diagnostics;
 
 namespace AsynqTest
 {
@@ -61,7 +62,9 @@ namespace AsynqTest
 
                 var descriptors = ClassQueryDescriptors.Default;
 
-                var queries = new IObservable<List<Tuple<Class, Course>>>[1];
+                var queries = new IObservable<List<Tuple<Class, Course>>>[500];
+
+                Stopwatch swTimer = Stopwatch.StartNew();
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     queries[i] = Asynq.ExecuteQuery(
@@ -84,6 +87,7 @@ namespace AsynqTest
                     // First() is blocking here, but the query should most likely already be complete:
                     List<Tuple<Class, Course>> rows = queries[i].First();
 
+#if TEST
                     Console.WriteLine("#{0,3}) {1} items.", i + 1, rows.Count);
                     foreach (var row in rows)
                     {
@@ -94,9 +98,12 @@ namespace AsynqTest
                            ,row.Item2.ID, row.Item2.Code, row.Item2.Name
                         );
                     }
+#endif
                 }
 
-                Console.WriteLine("Completed");
+                swTimer.Stop();
+
+                Console.WriteLine("Completed {0} queries in {1} ms, average {2} ms/query", queries.Length, swTimer.ElapsedMilliseconds, swTimer.ElapsedMilliseconds / (double)queries.Length);
             }
 
             Console.WriteLine("Press a key to end.");

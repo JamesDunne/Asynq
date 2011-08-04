@@ -121,7 +121,7 @@ namespace AsynqFramework
             // Get the DbCommand used to execute the query:
             DbCommand cmd = db.GetCommand(query.Query);
 
-#if DEBUG
+#if TEST
             // Dump the linq query to the console, colored:
             Console.WriteLine();
             var cw = new ConsoleColoredCodeWriter();
@@ -157,7 +157,7 @@ namespace AsynqFramework
                 // Create the async completion callback:
                 AsyncCallback callback = delegate(IAsyncResult iar)
                 {
-                    Console.WriteLine("Ending async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
+                    Debug.WriteLine("Ending async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
 
                     var st = (AsyncSqlExecState<Tcontext, Tparameters, Tresult>)iar.AsyncState;
 
