@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Data;
 
 namespace AsynqFramework.Materialization
 {
-    public interface IObjectMaterializationMapping<TdataSource>
+    public interface IObjectMaterializationMapping
     {
-        TdataSource DataSource { get; }
+        IDataRecord DataRecord { get; }
     }
 }

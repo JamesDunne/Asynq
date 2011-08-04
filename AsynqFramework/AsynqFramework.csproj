@@ -109,7 +109,7 @@
     <Compile Include="QueryDescriptor.cs" />
     <Compile Include="QueryProjector\ExpressionVisitor.cs" />
     <Compile Include="QueryProjector\LinqSyntaxExpressionFormatter.cs" />
-    <Compile Include="Materialization\DbDataReaderObjectMaterializer.cs" />
+    <Compile Include="Materialization\DataRecordObjectMaterializer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

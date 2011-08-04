@@ -33,14 +33,14 @@ namespace AsynqFramework
         {
             private Tcontext Context;
             private SqlCeCommand Command;
-            private ConstructedQuery<Tcontext, Tparameters, Tresult> Query;
+            private ConstructedQuery<Tcontext, Tparameters, Tresult> Constructed;
             private int ExpectedCount;
 
-            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> query, int expectedCount = 10)
+            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
             {
                 this.Context = context;
                 this.Command = cmd;
-                this.Query = query;
+                this.Constructed = constructed;
                 Debug.Assert(expectedCount >= 0);
                 this.ExpectedCount = expectedCount;
             }
@@ -57,8 +57,8 @@ namespace AsynqFramework
 
                     using (var dr = Command.ExecuteReader())
                     {
-                        var materializer = new DbDataReaderObjectMaterializer();
-                        var mapping = materializer.BuildMaterializationMapping(Query.Query.ElementType, dr);
+                        var materializer = new DataRecordObjectMaterializer();
+                        var mapping = materializer.BuildMaterializationMapping(Constructed.Query.Expression, Constructed.Query.ElementType, dr);
 
                         // Build a List so we can get out of here as soon as possible:
                         List<Tresult> items = new List<Tresult>(ExpectedCount);
@@ -66,7 +66,7 @@ namespace AsynqFramework
                         {
                             object row = materializer.Materialize(mapping);
 
-                            Tresult tmp = Query.RowProjection(row);
+                            Tresult tmp = Constructed.RowProjection(row);
                             items.Add(tmp);
                         }
 
@@ -94,14 +94,14 @@ namespace AsynqFramework
         {
             internal Tcontext Context;
             internal SqlCommand Command;
-            internal ConstructedQuery<Tcontext, Tparameters, Tresult> Query;
+            internal ConstructedQuery<Tcontext, Tparameters, Tresult> Constructed;
             internal int ExpectedCount;
 
-            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> query, int expectedCount = 10)
+            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
             {
                 Context = context;
                 Command = cmd;
-                Query = query;
+                Constructed = constructed;
                 Debug.Assert(expectedCount >= 0);
                 ExpectedCount = expectedCount;
             }
@@ -168,8 +168,8 @@ namespace AsynqFramework
                         // Get the data reader:
                         dr = st.Command.EndExecuteReader(iar);
 
-                        var materializer = new DbDataReaderObjectMaterializer();
-                        var mapping = materializer.BuildMaterializationMapping(st.Query.Query.ElementType, dr);
+                        var materializer = new DataRecordObjectMaterializer();
+                        var mapping = materializer.BuildMaterializationMapping(st.Constructed.Query.Expression, st.Constructed.Query.ElementType, dr);
 
                         // Build a List so we can get out of here as soon as possible:
                         List<Tresult> items = new List<Tresult>(st.ExpectedCount);
@@ -177,7 +177,7 @@ namespace AsynqFramework
                         {
                             object row = materializer.Materialize(mapping);
 
-                            Tresult tmp = st.Query.RowProjection(row);
+                            Tresult tmp = st.Constructed.RowProjection(row);
                             items.Add(tmp);
                         }
 

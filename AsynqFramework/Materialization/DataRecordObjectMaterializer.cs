@@ -5,10 +5,12 @@ using System.Text;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Reflection;
+using System.Data;
+using System.Linq.Expressions;
 
 namespace AsynqFramework.Materialization
 {
-    public sealed class DbDataReaderObjectMaterializer : IObjectMaterializer<DbDataReader>
+    public sealed class DataRecordObjectMaterializer : IObjectMaterializer
     {
         [DebuggerDisplay(@"{Name} <- {SourceOrdinal}")]
         private class MaterializationState
@@ -33,7 +35,7 @@ namespace AsynqFramework.Materialization
             public virtual string Name { get { return this.Type.Name; } }
             public virtual string FullName { get { return this.Type.FullName; } }
 
-            internal object Materialize(DbDataReader dr)
+            internal object Materialize(IDataRecord dr)
             {
                 // If no children, we are just a primitive column value:
                 if (Children.Count == 0)
@@ -116,30 +118,37 @@ namespace AsynqFramework.Materialization
             public override string FullName { get { return this.Parent.FullName + "." + this.Name; } }
         }
 
-        private class DbDataReaderObjectMaterializationMapping : IObjectMaterializationMapping<DbDataReader>
+        private class DataRecordObjectMaterializationMapping : IObjectMaterializationMapping
         {
-            public DbDataReader DataSource { get; private set; }
+            public IDataRecord DataRecord { get; private set; }
 
             internal MaterializationState Root { get; set; }
 
-            internal DbDataReaderObjectMaterializationMapping(DbDataReader dr, MaterializationState root)
+            internal DataRecordObjectMaterializationMapping(IDataRecord dr, MaterializationState root)
             {
-                this.DataSource = dr;
+                this.DataRecord = dr;
                 this.Root = root;
             }
         }
 
-        public IObjectMaterializationMapping<DbDataReader> BuildMaterializationMapping(Type destinationType, DbDataReader dataSource)
+        public IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource)
         {
             if (destinationType == null) throw new ArgumentNullException("destinationType");
             if (dataSource == null) throw new ArgumentNullException("dataSource");
 
+            IDataRecord rec = dataSource;
+            var root = buildMapping(destinationType, rec);
+            return new DataRecordObjectMaterializationMapping(dataSource, root);
+        }
+
+        private MaterializationState buildMapping(Type destinationType, IDataRecord rec)
+        {
             int ord = 0;
 
             Stack<MaterializationState> stk = new Stack<MaterializationState>();
             MaterializationState root = new MaterializationState(destinationType, null);
             stk.Push(root);
-            
+
             // Build up the column mappings according to the type:
             while (stk.Count > 0)
             {
@@ -148,7 +157,7 @@ namespace AsynqFramework.Materialization
                 if (state.Type.Name.StartsWith("<>f__AnonymousType"))
                 {
                     // Consume a 'test' bit column
-                    if (dataSource.GetName(ord).StartsWith("test") && (dataSource.GetFieldType(ord) == typeof(int)))
+                    if (rec.GetName(ord).StartsWith("test") && (rec.GetFieldType(ord) == typeof(int)))
                     {
                         state.NullTestOrdinal = ord++;
                     }
@@ -167,7 +176,7 @@ namespace AsynqFramework.Materialization
                 else if (!state.Type.IsPrimitive && state.Type.IsClass && !state.Type.IsAbstract && (state.Type != typeof(string)))
                 {
                     // Consume a 'test' bit column
-                    if (dataSource.GetName(ord).StartsWith("test") && (dataSource.GetFieldType(ord) == typeof(int)))
+                    if (rec.GetName(ord).StartsWith("test") && (rec.GetFieldType(ord) == typeof(int)))
                     {
                         state.NullTestOrdinal = ord++;
                     }
@@ -187,14 +196,14 @@ namespace AsynqFramework.Materialization
                 }
                 else
                 {
-                    // Assume a primitive type that can be read directly off the DbDataReader with GetValue(int).
+                    // Assume a primitive type that can be read directly off the IDataRecord with GetValue(int).
 
                     // Assume the columns are ordered by property/parameter declaration order.
                     // Assume that all properties/parameters declared have a column to map to.
-                    // TODO: Pick up the TEST bit columns used to generate null references with.
+                    // Assume that entities are assigned to only one property.
 
-                    Debug.Assert(ord < dataSource.FieldCount);
-                    Debug.Assert(dataSource.GetName(ord).StartsWith(state.Name, StringComparison.OrdinalIgnoreCase));
+                    Debug.Assert(ord < rec.FieldCount);
+                    Debug.Assert(rec.GetName(ord).StartsWith(state.Name, StringComparison.OrdinalIgnoreCase));
 
                     state.SourceOrdinal = ord++;
 
@@ -204,16 +213,16 @@ namespace AsynqFramework.Materialization
                 }
             }
 
-            Debug.Assert(ord == dataSource.FieldCount);
+            Debug.Assert(ord == rec.FieldCount);
 
-            return new DbDataReaderObjectMaterializationMapping(dataSource, root);
+            return root;
         }
 
-        public object Materialize(IObjectMaterializationMapping<DbDataReader> source)
+        public object Materialize(IObjectMaterializationMapping source)
         {
-            DbDataReaderObjectMaterializationMapping mapping = (DbDataReaderObjectMaterializationMapping)source;
+            DataRecordObjectMaterializationMapping mapping = (DataRecordObjectMaterializationMapping)source;
 
-            return mapping.Root.Materialize(source.DataSource);
+            return mapping.Root.Materialize(source.DataRecord);
         }
     }
 }

@@ -88,7 +88,7 @@ namespace AsynqTest
                     foreach (var row in rows)
                     {
                         Console.WriteLine(
-                            "      {1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}"
+                            "      {1}|{2}|{3}|{4}|{5}|{6}|{7}"
                            ,(i + 1)
                            ,row.Item1.ID, row.Item1.Code, row.Item1.Section, row.Item1.CourseID
                            ,row.Item2.ID, row.Item2.Code, row.Item2.Name

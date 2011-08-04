@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Linq.Expressions;
+using System.Data;
 
 namespace AsynqFramework.Materialization
 {
-    public interface IObjectMaterializer<TdataSource>
+    public interface IObjectMaterializer
     {
-        IObjectMaterializationMapping<TdataSource> BuildMaterializationMapping(Type destinationType, TdataSource dataSource);
+        IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource);
 
-        object Materialize(IObjectMaterializationMapping<TdataSource> mapping);
+        object Materialize(IObjectMaterializationMapping mapping);
     }
 }
