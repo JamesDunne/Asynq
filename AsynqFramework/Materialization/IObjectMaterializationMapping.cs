@@ -8,6 +8,5 @@ namespace AsynqFramework.Materialization
 {
     public interface IObjectMaterializationMapping
     {
-        IDataRecord DataRecord { get; }
     }
 }

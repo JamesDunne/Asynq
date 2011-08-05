@@ -62,7 +62,7 @@ namespace AsynqTest
 
                 var descriptors = ClassQueryDescriptors.Default;
 
-                var queries = new IObservable<List<Tuple<Class, Course>>>[500];
+                var queries = new IObservable<List<Tuple<Class, Course>>>[2500];
 
                 Stopwatch swTimer = Stopwatch.StartNew();
                 for (int i = 0; i < queries.Length; ++i)
@@ -73,7 +73,7 @@ namespace AsynqTest
                         // Give the query descriptor:
                        ,descriptor:     descriptors.GetClassByID
                         // Give the parameter container struct:
-                       ,parameters:     new OneIDParameter<ClassID>(new ClassID { Value = i + 1 })
+                       ,parameters:     new OneIDParameter<ClassID>(new ClassID { Value = (i % 11) + 1 })
                         // Optional argument used to give an initial expected capacity of the result's List<T>:
                        ,expectedCount:  1
                     );
@@ -103,7 +103,11 @@ namespace AsynqTest
 
                 swTimer.Stop();
 
-                Console.WriteLine("Completed {0} queries in {1} ms, average {2} ms/query", queries.Length, swTimer.ElapsedMilliseconds, swTimer.ElapsedMilliseconds / (double)queries.Length);
+                Console.WriteLine("Completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
+                    ,queries.Length
+                    ,swTimer.ElapsedMilliseconds
+                    ,swTimer.ElapsedMilliseconds / (double)queries.Length
+                    ,(queries.Length / (double)swTimer.ElapsedMilliseconds) * 1000d);
             }
 
             Console.WriteLine("Press a key to end.");

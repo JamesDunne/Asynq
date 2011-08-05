@@ -26,6 +26,13 @@ namespace AsynqFramework
         // The Translate() method supports flat models only with unique column name
         // mappings, which might be a blessing in disguise.
 
+        /// <summary>
+        /// MS SQL-CE "fake async" query executor; uses a separate thread with synchronous I/O since
+        /// SqlCeCommand does not expose the async I/O pattern.
+        /// </summary>
+        /// <typeparam name="Tcontext"></typeparam>
+        /// <typeparam name="Tparameters"></typeparam>
+        /// <typeparam name="Tresult"></typeparam>
         private class AsyncSqlCeExecutor<Tcontext, Tparameters, Tresult> : IObservable<List<Tresult>>
             where Tcontext : System.Data.Linq.DataContext
             where Tparameters : struct
@@ -36,7 +43,7 @@ namespace AsynqFramework
             private ConstructedQuery<Tcontext, Tparameters, Tresult> Constructed;
             private int ExpectedCount;
 
-            public AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
+            internal AsyncSqlCeExecutor(Tcontext context, SqlCeCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
             {
                 this.Context = context;
                 this.Command = cmd;
@@ -49,45 +56,54 @@ namespace AsynqFramework
 
             public IDisposable Subscribe(IObserver<List<Tresult>> observer)
             {
-                try
+                return Observable.Create<List<Tresult>>((ob) =>
                 {
-                    Debug.Assert(Command.Connection != null);
-                    Debug.Assert(Command.Connection.State == System.Data.ConnectionState.Open);
-                    //Command.Connection.Open();
-
-                    using (var dr = Command.ExecuteReader())
+                    try
                     {
-                        var materializer = new DataRecordObjectMaterializer();
-                        var mapping = materializer.BuildMaterializationMapping(Constructed.Query.Expression, Constructed.Query.ElementType, dr);
+                        Debug.Assert(Command.Connection != null);
+                        Debug.Assert(Command.Connection.State == System.Data.ConnectionState.Open);
+                        //Command.Connection.Open();
 
-                        // Build a List so we can get out of here as soon as possible:
-                        List<Tresult> items = new List<Tresult>(ExpectedCount);
-                        while (dr.Read())
+                        using (var dr = Command.ExecuteReader())
                         {
-                            object row = materializer.Materialize(mapping);
+                            var materializer = new DataRecordObjectMaterializer();
+                            var mapping = materializer.BuildMaterializationMapping(Constructed.Query.Expression, Constructed.Query.ElementType, dr);
 
-                            Tresult tmp = Constructed.RowProjection(row);
-                            items.Add(tmp);
+                            // Build a List so we can get out of here as soon as possible:
+                            List<Tresult> items = new List<Tresult>(ExpectedCount);
+                            while (dr.Read())
+                            {
+                                object row = materializer.Materialize(mapping, dr);
+
+                                Tresult tmp = Constructed.RowProjection(row);
+                                items.Add(tmp);
+                            }
+
+                            // Cave Johnson. We're done here.
+                            ob.OnNext(items);
+                            ob.OnCompleted();
                         }
 
-                        // Cave Johnson. We're done here.
-                        observer.OnNext(items);
-                        observer.OnCompleted();
+                        return Disposable.Empty;
                     }
-
-                    return Disposable.Empty;
-                }
-                finally
-                {
-                    Command.Connection.Close();
-                    Context.Dispose();
-                }
+                    finally
+                    {
+                        Command.Connection.Close();
+                        Context.Dispose();
+                    }
+                }).Subscribe(observer);
             }
 
             #endregion
         }
 
-        private struct AsyncSqlExecState<Tcontext, Tparameters, Tresult>
+        /// <summary>
+        /// SQL Server 200[058] async I/O query executor using true async I/O pattern via SqlCommand.
+        /// </summary>
+        /// <typeparam name="Tcontext"></typeparam>
+        /// <typeparam name="Tparameters"></typeparam>
+        /// <typeparam name="Tresult"></typeparam>
+        private class AsyncSqlState<Tcontext, Tparameters, Tresult>
             where Tcontext : System.Data.Linq.DataContext
             where Tparameters : struct
             where Tresult : class
@@ -97,7 +113,7 @@ namespace AsynqFramework
             internal ConstructedQuery<Tcontext, Tparameters, Tresult> Constructed;
             internal int ExpectedCount;
 
-            public AsyncSqlExecState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
+            internal AsyncSqlState(Tcontext context, SqlCommand cmd, ConstructedQuery<Tcontext, Tparameters, Tresult> constructed, int expectedCount = 10)
             {
                 Context = context;
                 Command = cmd;
@@ -159,7 +175,7 @@ namespace AsynqFramework
                 {
                     Debug.WriteLine("Ending async on Thread ID #{0}...", Thread.CurrentThread.ManagedThreadId);
 
-                    var st = (AsyncSqlExecState<Tcontext, Tparameters, Tresult>)iar.AsyncState;
+                    var st = (AsyncSqlState<Tcontext, Tparameters, Tresult>)iar.AsyncState;
 
                     SqlDataReader dr = null;
 
@@ -169,27 +185,32 @@ namespace AsynqFramework
                         dr = st.Command.EndExecuteReader(iar);
 
                         var materializer = new DataRecordObjectMaterializer();
-                        var mapping = materializer.BuildMaterializationMapping(st.Constructed.Query.Expression, st.Constructed.Query.ElementType, dr);
+                        var mapping = materializer.GetCachedMaterializationMapping(st.Constructed.Query.Expression, st.Constructed.Query.ElementType, dr);
 
                         // Build a List so we can get out of here as soon as possible:
                         List<Tresult> items = new List<Tresult>(st.ExpectedCount);
                         while (dr.Read())
                         {
-                            object row = materializer.Materialize(mapping);
+                            object row = materializer.Materialize(mapping, dr);
 
                             Tresult tmp = st.Constructed.RowProjection(row);
                             items.Add(tmp);
                         }
 
+                        // Notify the subject of the result List:
                         subj.OnNext(items);
                     }
                     catch (Exception ex)
                     {
+                        // TODO: log the exception here for best exception locality and stack-trace preservation.
+
+                        // Push the exception to the subject:
                         subj.OnError(ex);
                         return;
                     }
                     finally
                     {
+                        // TODO: more robust clean-up code
                         if (dr != null) dr.Dispose();
                         st.Context.Dispose();
                     }
@@ -204,7 +225,7 @@ namespace AsynqFramework
                 // Start the async IO to the database:
                 sqlcmd.BeginExecuteReader(
                     callback
-                   ,new AsyncSqlExecState<Tcontext, Tparameters, Tresult>(db, sqlcmd, query, expectedCount)
+                   ,new AsyncSqlState<Tcontext, Tparameters, Tresult>(db, sqlcmd, query, expectedCount)
                    ,System.Data.CommandBehavior.CloseConnection
                 );
 

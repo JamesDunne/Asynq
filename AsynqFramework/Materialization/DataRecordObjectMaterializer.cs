@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Data;
 using System.Linq.Expressions;
+using System.Collections.Concurrent;
 
 namespace AsynqFramework.Materialization
 {
@@ -120,28 +121,15 @@ namespace AsynqFramework.Materialization
 
         private class DataRecordObjectMaterializationMapping : IObjectMaterializationMapping
         {
-            public IDataRecord DataRecord { get; private set; }
-
             internal MaterializationState Root { get; set; }
 
-            internal DataRecordObjectMaterializationMapping(IDataRecord dr, MaterializationState root)
+            internal DataRecordObjectMaterializationMapping(MaterializationState root)
             {
-                this.DataRecord = dr;
                 this.Root = root;
             }
         }
 
-        public IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource)
-        {
-            if (destinationType == null) throw new ArgumentNullException("destinationType");
-            if (dataSource == null) throw new ArgumentNullException("dataSource");
-
-            IDataRecord rec = dataSource;
-            var root = buildMapping(destinationType, rec);
-            return new DataRecordObjectMaterializationMapping(dataSource, root);
-        }
-
-        private MaterializationState buildMapping(Type destinationType, IDataRecord rec)
+        private MaterializationState buildMapping(Expression query, Type destinationType, IDataRecord rec)
         {
             int ord = 0;
 
@@ -218,11 +206,82 @@ namespace AsynqFramework.Materialization
             return root;
         }
 
-        public object Materialize(IObjectMaterializationMapping source)
+        private sealed class MappingKey : IEquatable<MappingKey>
+        {
+            private Type elementType;
+            private string[] fieldNames;
+            private Type[] fieldTypes;
+            private int hc;
+
+            internal MappingKey(Type elementType, IDataRecord rec)
+            {
+                // Compute all equality-related values up-front:
+                this.elementType = elementType;
+                this.fieldNames = new string[rec.FieldCount];
+                this.fieldTypes = new Type[fieldNames.Length];
+
+                hc = elementType.GetHashCode();
+                for (int i = 0; i < fieldNames.Length; ++i)
+                {
+                    fieldNames[i] = rec.GetName(i);
+                    hc ^= fieldNames[i].GetHashCode();
+                    fieldTypes[i] = rec.GetFieldType(i);
+                    hc ^= fieldTypes[i].GetHashCode();
+                }
+            }
+
+            public override int GetHashCode()
+            {
+                return hc;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return Equals((MappingKey)obj);
+            }
+
+            #region IEquatable<MappingKey> Members
+
+            public bool Equals(MappingKey other)
+            {
+                if (this.hc == other.hc) return true;
+
+                if (this.elementType != other.elementType) return false;
+                for (int i = 0; i < this.fieldTypes.Length; ++i)
+                {
+                    if (this.fieldNames[i] != other.fieldNames[i]) return false;
+                    if (this.fieldTypes[i] != other.fieldTypes[i]) return false;
+                }
+                return true;
+            }
+
+            #endregion
+        }
+
+        private static readonly ConcurrentDictionary<MappingKey, DataRecordObjectMaterializationMapping> _mappingCache = new ConcurrentDictionary<MappingKey, DataRecordObjectMaterializationMapping>();
+
+        public IObjectMaterializationMapping GetCachedMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource)
+        {
+            MappingKey key = new MappingKey(destinationType, dataSource);
+
+            return _mappingCache.GetOrAdd(key, (k) => (DataRecordObjectMaterializationMapping)new DataRecordObjectMaterializer().BuildMaterializationMapping(query, destinationType, dataSource));
+        }
+
+        public IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource)
+        {
+            if (destinationType == null) throw new ArgumentNullException("destinationType");
+            if (dataSource == null) throw new ArgumentNullException("dataSource");
+
+            IDataRecord rec = dataSource;
+            var root = buildMapping(query, destinationType, rec);
+            return new DataRecordObjectMaterializationMapping(root);
+        }
+
+        public object Materialize(IObjectMaterializationMapping source, IDataRecord dataSource)
         {
             DataRecordObjectMaterializationMapping mapping = (DataRecordObjectMaterializationMapping)source;
 
-            return mapping.Root.Materialize(source.DataRecord);
+            return mapping.Root.Materialize(dataSource);
         }
     }
 }

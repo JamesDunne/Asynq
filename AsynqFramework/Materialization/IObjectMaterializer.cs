@@ -11,6 +11,6 @@ namespace AsynqFramework.Materialization
     {
         IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource);
 
-        object Materialize(IObjectMaterializationMapping mapping);
+        object Materialize(IObjectMaterializationMapping mapping, IDataRecord dataSource);
     }
 }
