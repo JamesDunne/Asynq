@@ -1,4 +1,5 @@
-﻿using System;
+﻿#define Cache
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -131,7 +132,10 @@ namespace AsynqFramework.Materialization
 
         private MaterializationState buildMapping(Expression query, Type destinationType, IDataRecord rec)
         {
+            Type columnMappingAttrType = typeof(System.Data.Linq.Mapping.ColumnAttribute);
             int ord = 0;
+            int fieldCount = rec.FieldCount;
+            string colName;
 
             Stack<MaterializationState> stk = new Stack<MaterializationState>();
             MaterializationState root = new MaterializationState(destinationType, null);
@@ -174,6 +178,9 @@ namespace AsynqFramework.Materialization
                     for (int i = props.Length - 1; i >= 0; --i)
                     {
                         if (props[i].GetSetMethod() == null) continue;
+                        // Assume LINQ-to-SQL attributed mapping:
+                        if (props[i].GetCustomAttributes(columnMappingAttrType, false).Length == 0) continue;
+
                         stk.Push(new PropertyMaterializationState(props[i].PropertyType, state, props[i]));
                     }
                 }
@@ -190,8 +197,10 @@ namespace AsynqFramework.Materialization
                     // Assume that all properties/parameters declared have a column to map to.
                     // Assume that entities are assigned to only one property.
 
-                    Debug.Assert(ord < rec.FieldCount);
-                    Debug.Assert(rec.GetName(ord).StartsWith(state.Name, StringComparison.OrdinalIgnoreCase));
+                    if (ord >= fieldCount) throw new InvalidOperationException("Expecting more columns to map than there are.");
+
+                    colName = rec.GetName(ord);
+                    if (!colName.StartsWith(state.Name, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException(String.Format("Attempting to map column ordinal {0}: '{1}' property does not match '{2}' column.", ord, state.Name, colName));
 
                     state.SourceOrdinal = ord++;
 
@@ -264,7 +273,17 @@ namespace AsynqFramework.Materialization
         {
             MappingKey key = new MappingKey(destinationType, dataSource);
 
-            return _mappingCache.GetOrAdd(key, (k) => (DataRecordObjectMaterializationMapping)new DataRecordObjectMaterializer().BuildMaterializationMapping(query, destinationType, dataSource));
+#if Cache
+            return _mappingCache.GetOrAdd(key, (k) =>
+#else
+            return
+#endif
+                (DataRecordObjectMaterializationMapping)new DataRecordObjectMaterializer().BuildMaterializationMapping(query, destinationType, dataSource)
+#if Cache
+            );
+#else
+            ;
+#endif
         }
 
         public IObjectMaterializationMapping BuildMaterializationMapping(Expression query, Type destinationType, IDataRecord dataSource)
