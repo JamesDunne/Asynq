@@ -8,8 +8,6 @@ using AsynqTest.ParameterContainers;
 
 namespace AsynqTest.Queries
 {
-    public struct CourseID : IModelIdentifier { public int Value { get; set; } }
-
     public sealed partial class CourseQueryDescriptors
     {
         public static readonly CourseQueryDescriptors Default = new CourseQueryDescriptors();
@@ -17,13 +15,15 @@ namespace AsynqTest.Queries
         /// <summary>
         /// Describes a query to get a Course by its CourseID.
         /// </summary>
-        public QueryDescriptor<ExampleDataContext, OneIDParameter<CourseID>, Course>
+        public QueryDescriptor<Data.ExampleDataContext, OneIDParameter<Models.CourseID>, Models.Course>
             GetCourseByID = Query.Describe(
-                (ExampleDataContext db, OneIDParameter<CourseID> p) =>
+                (Data.ExampleDataContext db, OneIDParameter<Models.CourseID> p) =>
 
                     from cr in db.Course
-                    where p.ID.Value == cr.ID
+                    where p.ID.Value == cr.CourseID
                     select cr
+
+               ,row => ModelMapping.mapCourse(row)
             );
     }
 }

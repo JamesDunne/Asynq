@@ -62,18 +62,18 @@ namespace AsynqTest
 
                 var descriptors = ClassQueryDescriptors.Default;
 
-                var queries = new IObservable<List<Tuple<Class, Course>>>[2500];
+                var queries = new IObservable<List<Tuple<Models.Class, Models.Course>>>[1000];
 
                 Stopwatch swTimer = Stopwatch.StartNew();
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     queries[i] = Asynq.ExecuteQuery(
                         // Pass a lambda used to instantiate a new data context per each query:
-                        createContext:  () => new ExampleDataContext(connString)
+                        createContext:  () => new Data.ExampleDataContext(connString)
                         // Give the query descriptor:
                        ,descriptor:     descriptors.GetClassByID
                         // Give the parameter container struct:
-                       ,parameters:     new OneIDParameter<ClassID>(new ClassID { Value = (i % 11) + 1 })
+                       ,parameters:     new OneIDParameter<Models.ClassID>(new Models.ClassID((i % 11) + 1))
                         // Optional argument used to give an initial expected capacity of the result's List<T>:
                        ,expectedCount:  1
                     );
@@ -85,7 +85,7 @@ namespace AsynqTest
                 for (int i = 0; i < queries.Length; ++i)
                 {
                     // First() is blocking here, but the query should most likely already be complete:
-                    List<Tuple<Class, Course>> rows = queries[i].First();
+                    List<Tuple<Models.Class, Models.Course>> rows = queries[i].First();
 
 #if TEST
                     Console.WriteLine("#{0,3}) {1} items.", i + 1, rows.Count);

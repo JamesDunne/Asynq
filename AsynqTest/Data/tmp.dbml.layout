@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ordesignerObjectsDiagram dslVersion="1.0.0.0" absoluteBounds="0, 0, 11, 8.5" name="tmp">
+  <DataContextMoniker Name="/ExampleDataContext" />
+  <nestedChildShapes>
+    <classShape Id="5869a645-7b06-4014-8ef6-199fff8627cd" absoluteBounds="6, 0.875, 2, 1.5023929850260416">
+      <DataClassMoniker Name="/ExampleDataContext/Class" />
+      <nestedChildShapes>
+        <elementListCompartment Id="6743352a-fb8f-45c6-b631-c5361d850e6e" absoluteBounds="6.0150000000000006, 1.335, 1.9700000000000002, 0.94239298502604174" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
+      </nestedChildShapes>
+    </classShape>
+    <classShape Id="bf2b4022-415e-4938-afd0-ee2af40f5768" absoluteBounds="0.75, 1, 2, 1.3239465332031248">
+      <DataClassMoniker Name="/ExampleDataContext/Course" />
+      <nestedChildShapes>
+        <elementListCompartment Id="e4458b1e-8e50-44dc-a1cf-f2d54f0180d3" absoluteBounds="0.765, 1.46, 1.9700000000000002, 0.763946533203125" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
+      </nestedChildShapes>
+    </classShape>
+    <associationConnector edgePoints="[(2.75 : 1.66197326660156); (6 : 1.66197326660156)]" fixedFrom="NotFixed" fixedTo="NotFixed">
+      <AssociationMoniker Name="/ExampleDataContext/Course/Course_Class" />
+      <nodes>
+        <classShapeMoniker Id="bf2b4022-415e-4938-afd0-ee2af40f5768" />
+        <classShapeMoniker Id="5869a645-7b06-4014-8ef6-199fff8627cd" />
+      </nodes>
+    </associationConnector>
+  </nestedChildShapes>
+</ordesignerObjectsDiagram>

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?><Database Name="Asynq" EntityNamespace="AsynqTest.Data" ContextNamespace="AsynqTest.Data" Class="ExampleDataContext" Modifier="Sealed" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
+  <Connection Mode="AppSettings" ConnectionString="Data Source=(local)\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=True" SettingsObjectName="AsynqTest.Properties.Settings" SettingsPropertyName="AsynqConnectionString" Provider="System.Data.SqlClient" />
+  <Table Name="dbo.Class" Member="Class" AccessModifier="Internal">
+    <Type Name="Class" AccessModifier="Internal" Modifier="Sealed">
+      <Column Name="ClassID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="CourseID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="Code" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
+      <Column Name="Section" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
+      <Association Name="Course_Class" Member="Course" ThisKey="CourseID" OtherKey="CourseID" Type="Course" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Course" Member="Course" AccessModifier="Internal">
+    <Type Name="Course" AccessModifier="Internal" Modifier="Sealed">
+      <Column Name="CourseID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="Code" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(250) NOT NULL" CanBeNull="false" />
+      <Association Name="Course_Class" Member="Classes" ThisKey="CourseID" OtherKey="CourseID" Type="Class" />
+    </Type>
+  </Table>
+</Database>

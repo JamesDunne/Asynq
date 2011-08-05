@@ -8,8 +8,6 @@ using AsynqTest.ParameterContainers;
 
 namespace AsynqTest.Queries
 {
-    public struct ClassID : IModelIdentifier { public int Value { get; set; } }
-
     public sealed partial class ClassQueryDescriptors
     {
         public static readonly ClassQueryDescriptors Default = new ClassQueryDescriptors();
@@ -17,18 +15,18 @@ namespace AsynqTest.Queries
         /// <summary>
         /// Describes a query to get a Class (and its related Course) by its ClassID.
         /// </summary>
-        public QueryDescriptor<ExampleDataContext, OneIDParameter<ClassID>, Tuple<Class, Course>>
+        public QueryDescriptor<Data.ExampleDataContext, OneIDParameter<Models.ClassID>, Tuple<Models.Class, Models.Course>>
             GetClassByID = Query.Describe(
-                (ExampleDataContext db, OneIDParameter<ClassID> p) =>
+                (Data.ExampleDataContext db, OneIDParameter<Models.ClassID> p) =>
 
                     from cl in db.Class
-                    join cr in db.Course on cl.CourseID equals cr.ID
-                    join crBad in db.Course on cl.ID equals crBad.ID into crBadLJ
+                    join cr in db.Course on cl.CourseID equals cr.CourseID
+                    join crBad in db.Course on cl.ClassID equals crBad.CourseID into crBadLJ
                     from crBad in crBadLJ.DefaultIfEmpty()
-                    where p.ID.Value == cl.ID
+                    where p.ID.Value == cl.ClassID
                     select new { cl, cr, courseCount = db.Course.Count(), crBad /*, d2 = crBad *//*, c = true, d = 1, e = 2, f = cr.ID*/ }
 
-               ,row => new Tuple<Class, Course>(row.cl, row.cr)
+               ,row => new Tuple<Models.Class, Models.Course>(ModelMapping.mapClass(row.cl), ModelMapping.mapCourse(row.cr))
             );
     }
 }

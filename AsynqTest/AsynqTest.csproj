@@ -95,29 +95,42 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IModelIdentifier.cs" />
+    <Compile Include="Models\Class.cs" />
+    <Compile Include="Models\Course.cs" />
     <Compile Include="ParameterContainers\NoParameters.cs" />
     <Compile Include="ParameterContainers\OneIDParameter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
     <Compile Include="Queries\ClassQueryDescriptors.cs" />
     <Compile Include="Queries\CourseQueryDescriptors.cs" />
+    <Compile Include="Queries\ModelMapping.cs" />
     <Compile Include="Queries\SampleQueryDescriptors.cs" />
-    <Compile Include="tmp.designer.cs">
+    <Compile Include="Data\tmp.designer.cs">
       <DependentUpon>tmp.dbml</DependentUpon>
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
-    <None Include="tmp.dbml">
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="Data\tmp.dbml">
       <Generator>MSLinqToSQLGenerator</Generator>
       <LastGenOutput>tmp.designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="tmp.dbml.layout">
+    <None Include="Data\tmp.dbml.layout">
       <DependentUpon>tmp.dbml</DependentUpon>
     </None>
   </ItemGroup>
@@ -162,6 +175,7 @@
       <Name>AsynqFramework</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
