@@ -14,5 +14,8 @@ namespace AsynqTest.Models
     public sealed class Class
     {
         public ClassID ID { get; set; }
+        public CourseID CourseID { get; set; }
+        public string Code { get; set; }
+        public string Section { get; set; }
     }
 }

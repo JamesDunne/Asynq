@@ -13,6 +13,9 @@ namespace AsynqTest.Queries
             if (onto == null) onto = new Models.Class();
 
             onto.ID = new Models.ClassID(mdl.ClassID);
+            onto.CourseID = new Models.CourseID(mdl.CourseID);
+            onto.Code = mdl.Code;
+            onto.Section = mdl.Section;
 
             return onto;
         }
@@ -23,6 +26,8 @@ namespace AsynqTest.Queries
             if (onto == null) onto = new Models.Course();
 
             onto.ID = new Models.CourseID(mdl.CourseID);
+            onto.Code = mdl.Code;
+            onto.Name = mdl.Name;
 
             return onto;
         }
