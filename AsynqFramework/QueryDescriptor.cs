@@ -13,11 +13,11 @@ namespace AsynqFramework
         where Tresult : class
     {
         private Func<Tcontext, Tparameters, IQueryable> buildQuery;
-        private Converter<object, Tresult> rowProjection;
+        private Func<object, Tresult> rowProjection;
 
         internal QueryDescriptor(
             Func<Tcontext, Tparameters, IQueryable> buildQuery
-           ,Converter<object, Tresult> converter
+           ,Func<object, Tresult> converter
         )
         {
             this.buildQuery = buildQuery;
@@ -39,9 +39,9 @@ namespace AsynqFramework
         public Tcontext Context { get; private set; }
         public IQueryable Query { get; private set; }
         public Tparameters Parameters { get; private set; }
-        public Converter<object, Tresult> RowProjection { get; private set; }
+        public Func<object, Tresult> RowProjection { get; private set; }
 
-        internal ConstructedQuery(QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tcontext context, IQueryable query, Tparameters parameters, Converter<object, Tresult> rowProjection)
+        internal ConstructedQuery(QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tcontext context, IQueryable query, Tparameters parameters, Func<object, Tresult> rowProjection)
         {
             this.Descriptor = descriptor;
             this.Context = context;
@@ -57,7 +57,7 @@ namespace AsynqFramework
         public static QueryDescriptor<Tcontext, Tparameters, Tresult>
             Describe<Ttmp, Tcontext, Tparameters, Tresult>(
                 Func<Tcontext, Tparameters, IQueryable<Ttmp>> buildQuery
-               ,Converter<Ttmp, Tresult> converter
+               ,Func<Ttmp, Tresult> converter
             )
             where Tcontext : System.Data.Linq.DataContext
             where Tparameters : struct
