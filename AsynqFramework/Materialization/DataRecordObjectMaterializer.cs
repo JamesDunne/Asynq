@@ -184,12 +184,11 @@ namespace AsynqFramework.Materialization
                         stk.Push(new PropertyMaterializationState(props[i].PropertyType, state, props[i]));
                     }
                 }
-                else if (!state.Type.IsPrimitive && state.Type.IsValueType && !state.Type.IsAbstract)
-                {
-                    // Figure something out here; probably assigning writable properties again.
-                    throw new NotImplementedException();
-                }
-                else
+                else if (state.Type.IsPrimitive
+                     || (state.Type.IsGenericType && state.Type.GetGenericTypeDefinition() == typeof(System.Nullable<>))
+                     || (state.Type == typeof(DateTime))
+                     || (state.Type == typeof(string))
+                )
                 {
                     // Assume a primitive type that can be read directly off the IDataRecord with GetValue(int).
 
@@ -199,6 +198,11 @@ namespace AsynqFramework.Materialization
 
                     if (ord >= fieldCount) throw new InvalidOperationException("Expecting more columns to map than there are.");
 
+                    if (state.Type.IsGenericType && state.Type.GetGenericTypeDefinition() == typeof(System.Nullable<>))
+                    {
+                        state.NullTestOrdinal = ord;
+                    }
+
                     colName = rec.GetName(ord);
                     if (!colName.StartsWith(state.Name, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException(String.Format("Attempting to map column ordinal {0}: '{1}' property does not match '{2}' column.", ord, state.Name, colName));
 
@@ -207,6 +211,10 @@ namespace AsynqFramework.Materialization
                     // NOTE: We can do better via the naming convention of `ColumnName###` where `###` is an integer value
                     // used to distinguish between repeated usages of the same column name. Simply tracking the incrementing
                     // integer values per column name by moving forward through the ordinals should work.
+                }
+                else
+                {
+                    throw new NotSupportedException();
                 }
             }
 

@@ -137,7 +137,7 @@ namespace AsynqFramework
             // Get the DbCommand used to execute the query:
             DbCommand cmd = db.GetCommand(query.Query);
 
-#if TEST
+#if DEBUG
             // Dump the linq query to the console, colored:
             Console.WriteLine();
             var cw = new ConsoleColoredCodeWriter();
