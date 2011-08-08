@@ -96,7 +96,11 @@
   <ItemGroup>
     <Compile Include="IModelIdentifier.cs" />
     <Compile Include="Models\Class.cs" />
+    <Compile Include="Models\ClassEnrollment.cs" />
     <Compile Include="Models\Course.cs" />
+    <Compile Include="Models\ProgramEnrollment.cs" />
+    <Compile Include="Models\Staff.cs" />
+    <Compile Include="Models\Term.cs" />
     <Compile Include="ParameterContainers\NoParameters.cs" />
     <Compile Include="ParameterContainers\OneIDParameter.cs" />
     <Compile Include="Program.cs" />
@@ -106,6 +110,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Queries\ClassEnrollmentQueryDescriptors.cs" />
     <Compile Include="Queries\ClassQueryDescriptors.cs" />
     <Compile Include="Queries\CourseQueryDescriptors.cs" />
     <Compile Include="Queries\ModelMapping.cs" />

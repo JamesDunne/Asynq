@@ -1,20 +1,61 @@
 ﻿<?xml version="1.0" encoding="utf-8"?><Database Name="Asynq" EntityNamespace="AsynqTest.Data" ContextNamespace="AsynqTest.Data" Class="ExampleDataContext" Modifier="Sealed" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
   <Connection Mode="AppSettings" ConnectionString="Data Source=(local)\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=True" SettingsObjectName="AsynqTest.Properties.Settings" SettingsPropertyName="AsynqConnectionString" Provider="System.Data.SqlClient" />
-  <Table Name="dbo.Class" Member="Class" AccessModifier="Internal">
-    <Type Name="Class" AccessModifier="Internal" Modifier="Sealed">
+  <Table Name="dbo.Class" Member="Class">
+    <Type Name="Class">
       <Column Name="ClassID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
       <Column Name="CourseID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
       <Column Name="Code" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
       <Column Name="Section" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
+      <Column Name="InstructorStaffID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Association Name="Class_ClassEnrollment" Member="ClassEnrollment" ThisKey="ClassID" OtherKey="ClassID" Type="ClassEnrollment" />
       <Association Name="Course_Class" Member="Course" ThisKey="CourseID" OtherKey="CourseID" Type="Course" IsForeignKey="true" />
     </Type>
   </Table>
-  <Table Name="dbo.Course" Member="Course" AccessModifier="Internal">
-    <Type Name="Course" AccessModifier="Internal" Modifier="Sealed">
+  <Table Name="dbo.Term" Member="Term">
+    <Type Name="Term">
+      <Column Name="TermID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="Code" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" DbType="NVarChar(50) NOT NULL" CanBeNull="false" />
+      <Column Name="StartDate" Type="System.DateTime" DbType="Date NOT NULL" CanBeNull="false" />
+      <Column Name="EndDate" Type="System.DateTime" DbType="Date NOT NULL" CanBeNull="false" />
+      <Association Name="Term_ClassEnrollment" Member="ClassEnrollment" ThisKey="TermID" OtherKey="TermID" Type="ClassEnrollment" />
+    </Type>
+  </Table>
+  <Table Name="dbo.ClassEnrollment" Member="ClassEnrollment">
+    <Type Name="ClassEnrollment">
+      <Column Name="ClassEnrollmentID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="ProgramEnrollmentID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="CourseID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="ClassID" Type="System.Int32" DbType="Int" CanBeNull="true" />
+      <Column Name="TermID" Type="System.Int32" DbType="Int" CanBeNull="true" />
+      <Association Name="Class_ClassEnrollment" Member="Class" ThisKey="ClassID" OtherKey="ClassID" Type="Class" IsForeignKey="true" />
+      <Association Name="Term_ClassEnrollment" Member="Term" ThisKey="TermID" OtherKey="TermID" Type="Term" IsForeignKey="true" />
+      <Association Name="Course_ClassEnrollment" Member="Course" ThisKey="CourseID" OtherKey="CourseID" Type="Course" IsForeignKey="true" />
+      <Association Name="ProgramEnrollment_ClassEnrollment" Member="ProgramEnrollment" ThisKey="ProgramEnrollmentID" OtherKey="ProgramEnrollmentID" Type="ProgramEnrollment" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Course" Member="Course">
+    <Type Name="Course">
       <Column Name="CourseID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
       <Column Name="Code" Type="System.String" DbType="VarChar(20) NOT NULL" CanBeNull="false" />
       <Column Name="Name" Type="System.String" DbType="NVarChar(250) NOT NULL" CanBeNull="false" />
-      <Association Name="Course_Class" Member="Classes" ThisKey="CourseID" OtherKey="CourseID" Type="Class" />
+      <Association Name="Course_Class" Member="Class" ThisKey="CourseID" OtherKey="CourseID" Type="Class" />
+      <Association Name="Course_ClassEnrollment" Member="ClassEnrollment" ThisKey="CourseID" OtherKey="CourseID" Type="ClassEnrollment" />
+    </Type>
+  </Table>
+  <Table Name="dbo.ProgramEnrollment" Member="ProgramEnrollment">
+    <Type Name="ProgramEnrollment">
+      <Column Name="ProgramEnrollmentID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="StudentID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Column Name="ProgramVersionID" Type="System.Int32" DbType="Int NOT NULL" CanBeNull="false" />
+      <Association Name="ProgramEnrollment_ClassEnrollment" Member="ClassEnrollment" ThisKey="ProgramEnrollmentID" OtherKey="ProgramEnrollmentID" Type="ClassEnrollment" />
+    </Type>
+  </Table>
+  <Table Name="dbo.Staff" Member="Staff">
+    <Type Name="Staff">
+      <Column Name="StaffID" Type="System.Int32" DbType="Int NOT NULL IDENTITY" IsPrimaryKey="true" IsDbGenerated="true" CanBeNull="false" />
+      <Column Name="FirstName" Type="System.String" DbType="NVarChar(64) NOT NULL" CanBeNull="false" />
+      <Column Name="LastName" Type="System.String" DbType="NVarChar(64) NOT NULL" CanBeNull="false" />
     </Type>
   </Table>
 </Database>

@@ -33,9 +33,21 @@ namespace AsynqTest.Data
     partial void InsertClass(Class instance);
     partial void UpdateClass(Class instance);
     partial void DeleteClass(Class instance);
+    partial void InsertTerm(Term instance);
+    partial void UpdateTerm(Term instance);
+    partial void DeleteTerm(Term instance);
+    partial void InsertClassEnrollment(ClassEnrollment instance);
+    partial void UpdateClassEnrollment(ClassEnrollment instance);
+    partial void DeleteClassEnrollment(ClassEnrollment instance);
     partial void InsertCourse(Course instance);
     partial void UpdateCourse(Course instance);
     partial void DeleteCourse(Course instance);
+    partial void InsertProgramEnrollment(ProgramEnrollment instance);
+    partial void UpdateProgramEnrollment(ProgramEnrollment instance);
+    partial void DeleteProgramEnrollment(ProgramEnrollment instance);
+    partial void InsertStaff(Staff instance);
+    partial void UpdateStaff(Staff instance);
+    partial void DeleteStaff(Staff instance);
     #endregion
 		
 		public ExampleDataContext() : 
@@ -68,7 +80,7 @@ namespace AsynqTest.Data
 			OnCreated();
 		}
 		
-		internal System.Data.Linq.Table<Class> Class
+		public System.Data.Linq.Table<Class> Class
 		{
 			get
 			{
@@ -76,17 +88,49 @@ namespace AsynqTest.Data
 			}
 		}
 		
-		internal System.Data.Linq.Table<Course> Course
+		public System.Data.Linq.Table<Term> Term
+		{
+			get
+			{
+				return this.GetTable<Term>();
+			}
+		}
+		
+		public System.Data.Linq.Table<ClassEnrollment> ClassEnrollment
+		{
+			get
+			{
+				return this.GetTable<ClassEnrollment>();
+			}
+		}
+		
+		public System.Data.Linq.Table<Course> Course
 		{
 			get
 			{
 				return this.GetTable<Course>();
 			}
 		}
+		
+		public System.Data.Linq.Table<ProgramEnrollment> ProgramEnrollment
+		{
+			get
+			{
+				return this.GetTable<ProgramEnrollment>();
+			}
+		}
+		
+		public System.Data.Linq.Table<Staff> Staff
+		{
+			get
+			{
+				return this.GetTable<Staff>();
+			}
+		}
 	}
 	
 	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.Class")]
-	internal sealed partial class Class : INotifyPropertyChanging, INotifyPropertyChanged
+	public partial class Class : INotifyPropertyChanging, INotifyPropertyChanged
 	{
 		
 		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
@@ -98,6 +142,10 @@ namespace AsynqTest.Data
 		private string _Code;
 		
 		private string _Section;
+		
+		private int _InstructorStaffID;
+		
+		private EntitySet<ClassEnrollment> _ClassEnrollment;
 		
 		private EntityRef<Course> _Course;
 		
@@ -113,10 +161,13 @@ namespace AsynqTest.Data
     partial void OnCodeChanged();
     partial void OnSectionChanging(string value);
     partial void OnSectionChanged();
+    partial void OnInstructorStaffIDChanging(int value);
+    partial void OnInstructorStaffIDChanged();
     #endregion
 		
 		public Class()
 		{
+			this._ClassEnrollment = new EntitySet<ClassEnrollment>(new Action<ClassEnrollment>(this.attach_ClassEnrollment), new Action<ClassEnrollment>(this.detach_ClassEnrollment));
 			this._Course = default(EntityRef<Course>);
 			OnCreated();
 		}
@@ -205,6 +256,39 @@ namespace AsynqTest.Data
 			}
 		}
 		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_InstructorStaffID", DbType="Int NOT NULL")]
+		public int InstructorStaffID
+		{
+			get
+			{
+				return this._InstructorStaffID;
+			}
+			set
+			{
+				if ((this._InstructorStaffID != value))
+				{
+					this.OnInstructorStaffIDChanging(value);
+					this.SendPropertyChanging();
+					this._InstructorStaffID = value;
+					this.SendPropertyChanged("InstructorStaffID");
+					this.OnInstructorStaffIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Class_ClassEnrollment", Storage="_ClassEnrollment", ThisKey="ClassID", OtherKey="ClassID")]
+		public EntitySet<ClassEnrollment> ClassEnrollment
+		{
+			get
+			{
+				return this._ClassEnrollment;
+			}
+			set
+			{
+				this._ClassEnrollment.Assign(value);
+			}
+		}
+		
 		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Course_Class", Storage="_Course", ThisKey="CourseID", OtherKey="CourseID", IsForeignKey=true)]
 		public Course Course
 		{
@@ -222,12 +306,12 @@ namespace AsynqTest.Data
 					if ((previousValue != null))
 					{
 						this._Course.Entity = null;
-						previousValue.Classes.Remove(this);
+						previousValue.Class.Remove(this);
 					}
 					this._Course.Entity = value;
 					if ((value != null))
 					{
-						value.Classes.Add(this);
+						value.Class.Add(this);
 						this._CourseID = value.CourseID;
 					}
 					else
@@ -243,7 +327,7 @@ namespace AsynqTest.Data
 		
 		public event PropertyChangedEventHandler PropertyChanged;
 		
-		private void SendPropertyChanging()
+		protected virtual void SendPropertyChanging()
 		{
 			if ((this.PropertyChanging != null))
 			{
@@ -251,7 +335,527 @@ namespace AsynqTest.Data
 			}
 		}
 		
-		private void SendPropertyChanged(String propertyName)
+		protected virtual void SendPropertyChanged(String propertyName)
+		{
+			if ((this.PropertyChanged != null))
+			{
+				this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
+		}
+		
+		private void attach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Class = this;
+		}
+		
+		private void detach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Class = null;
+		}
+	}
+	
+	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.Term")]
+	public partial class Term : INotifyPropertyChanging, INotifyPropertyChanged
+	{
+		
+		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
+		
+		private int _TermID;
+		
+		private string _Code;
+		
+		private string _Name;
+		
+		private System.DateTime _StartDate;
+		
+		private System.DateTime _EndDate;
+		
+		private EntitySet<ClassEnrollment> _ClassEnrollment;
+		
+    #region Extensibility Method Definitions
+    partial void OnLoaded();
+    partial void OnValidate(System.Data.Linq.ChangeAction action);
+    partial void OnCreated();
+    partial void OnTermIDChanging(int value);
+    partial void OnTermIDChanged();
+    partial void OnCodeChanging(string value);
+    partial void OnCodeChanged();
+    partial void OnNameChanging(string value);
+    partial void OnNameChanged();
+    partial void OnStartDateChanging(System.DateTime value);
+    partial void OnStartDateChanged();
+    partial void OnEndDateChanging(System.DateTime value);
+    partial void OnEndDateChanged();
+    #endregion
+		
+		public Term()
+		{
+			this._ClassEnrollment = new EntitySet<ClassEnrollment>(new Action<ClassEnrollment>(this.attach_ClassEnrollment), new Action<ClassEnrollment>(this.detach_ClassEnrollment));
+			OnCreated();
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_TermID", AutoSync=AutoSync.OnInsert, DbType="Int NOT NULL IDENTITY", IsPrimaryKey=true, IsDbGenerated=true)]
+		public int TermID
+		{
+			get
+			{
+				return this._TermID;
+			}
+			set
+			{
+				if ((this._TermID != value))
+				{
+					this.OnTermIDChanging(value);
+					this.SendPropertyChanging();
+					this._TermID = value;
+					this.SendPropertyChanged("TermID");
+					this.OnTermIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Code", DbType="VarChar(20) NOT NULL", CanBeNull=false)]
+		public string Code
+		{
+			get
+			{
+				return this._Code;
+			}
+			set
+			{
+				if ((this._Code != value))
+				{
+					this.OnCodeChanging(value);
+					this.SendPropertyChanging();
+					this._Code = value;
+					this.SendPropertyChanged("Code");
+					this.OnCodeChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_Name", DbType="NVarChar(50) NOT NULL", CanBeNull=false)]
+		public string Name
+		{
+			get
+			{
+				return this._Name;
+			}
+			set
+			{
+				if ((this._Name != value))
+				{
+					this.OnNameChanging(value);
+					this.SendPropertyChanging();
+					this._Name = value;
+					this.SendPropertyChanged("Name");
+					this.OnNameChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_StartDate", DbType="Date NOT NULL")]
+		public System.DateTime StartDate
+		{
+			get
+			{
+				return this._StartDate;
+			}
+			set
+			{
+				if ((this._StartDate != value))
+				{
+					this.OnStartDateChanging(value);
+					this.SendPropertyChanging();
+					this._StartDate = value;
+					this.SendPropertyChanged("StartDate");
+					this.OnStartDateChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_EndDate", DbType="Date NOT NULL")]
+		public System.DateTime EndDate
+		{
+			get
+			{
+				return this._EndDate;
+			}
+			set
+			{
+				if ((this._EndDate != value))
+				{
+					this.OnEndDateChanging(value);
+					this.SendPropertyChanging();
+					this._EndDate = value;
+					this.SendPropertyChanged("EndDate");
+					this.OnEndDateChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Term_ClassEnrollment", Storage="_ClassEnrollment", ThisKey="TermID", OtherKey="TermID")]
+		public EntitySet<ClassEnrollment> ClassEnrollment
+		{
+			get
+			{
+				return this._ClassEnrollment;
+			}
+			set
+			{
+				this._ClassEnrollment.Assign(value);
+			}
+		}
+		
+		public event PropertyChangingEventHandler PropertyChanging;
+		
+		public event PropertyChangedEventHandler PropertyChanged;
+		
+		protected virtual void SendPropertyChanging()
+		{
+			if ((this.PropertyChanging != null))
+			{
+				this.PropertyChanging(this, emptyChangingEventArgs);
+			}
+		}
+		
+		protected virtual void SendPropertyChanged(String propertyName)
+		{
+			if ((this.PropertyChanged != null))
+			{
+				this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
+		}
+		
+		private void attach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Term = this;
+		}
+		
+		private void detach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Term = null;
+		}
+	}
+	
+	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.ClassEnrollment")]
+	public partial class ClassEnrollment : INotifyPropertyChanging, INotifyPropertyChanged
+	{
+		
+		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
+		
+		private int _ClassEnrollmentID;
+		
+		private int _ProgramEnrollmentID;
+		
+		private int _CourseID;
+		
+		private System.Nullable<int> _ClassID;
+		
+		private System.Nullable<int> _TermID;
+		
+		private EntityRef<Class> _Class;
+		
+		private EntityRef<Term> _Term;
+		
+		private EntityRef<Course> _Course;
+		
+		private EntityRef<ProgramEnrollment> _ProgramEnrollment;
+		
+    #region Extensibility Method Definitions
+    partial void OnLoaded();
+    partial void OnValidate(System.Data.Linq.ChangeAction action);
+    partial void OnCreated();
+    partial void OnClassEnrollmentIDChanging(int value);
+    partial void OnClassEnrollmentIDChanged();
+    partial void OnProgramEnrollmentIDChanging(int value);
+    partial void OnProgramEnrollmentIDChanged();
+    partial void OnCourseIDChanging(int value);
+    partial void OnCourseIDChanged();
+    partial void OnClassIDChanging(System.Nullable<int> value);
+    partial void OnClassIDChanged();
+    partial void OnTermIDChanging(System.Nullable<int> value);
+    partial void OnTermIDChanged();
+    #endregion
+		
+		public ClassEnrollment()
+		{
+			this._Class = default(EntityRef<Class>);
+			this._Term = default(EntityRef<Term>);
+			this._Course = default(EntityRef<Course>);
+			this._ProgramEnrollment = default(EntityRef<ProgramEnrollment>);
+			OnCreated();
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ClassEnrollmentID", AutoSync=AutoSync.OnInsert, DbType="Int NOT NULL IDENTITY", IsPrimaryKey=true, IsDbGenerated=true)]
+		public int ClassEnrollmentID
+		{
+			get
+			{
+				return this._ClassEnrollmentID;
+			}
+			set
+			{
+				if ((this._ClassEnrollmentID != value))
+				{
+					this.OnClassEnrollmentIDChanging(value);
+					this.SendPropertyChanging();
+					this._ClassEnrollmentID = value;
+					this.SendPropertyChanged("ClassEnrollmentID");
+					this.OnClassEnrollmentIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ProgramEnrollmentID", DbType="Int NOT NULL")]
+		public int ProgramEnrollmentID
+		{
+			get
+			{
+				return this._ProgramEnrollmentID;
+			}
+			set
+			{
+				if ((this._ProgramEnrollmentID != value))
+				{
+					if (this._ProgramEnrollment.HasLoadedOrAssignedValue)
+					{
+						throw new System.Data.Linq.ForeignKeyReferenceAlreadyHasValueException();
+					}
+					this.OnProgramEnrollmentIDChanging(value);
+					this.SendPropertyChanging();
+					this._ProgramEnrollmentID = value;
+					this.SendPropertyChanged("ProgramEnrollmentID");
+					this.OnProgramEnrollmentIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_CourseID", DbType="Int NOT NULL")]
+		public int CourseID
+		{
+			get
+			{
+				return this._CourseID;
+			}
+			set
+			{
+				if ((this._CourseID != value))
+				{
+					if (this._Course.HasLoadedOrAssignedValue)
+					{
+						throw new System.Data.Linq.ForeignKeyReferenceAlreadyHasValueException();
+					}
+					this.OnCourseIDChanging(value);
+					this.SendPropertyChanging();
+					this._CourseID = value;
+					this.SendPropertyChanged("CourseID");
+					this.OnCourseIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ClassID", DbType="Int")]
+		public System.Nullable<int> ClassID
+		{
+			get
+			{
+				return this._ClassID;
+			}
+			set
+			{
+				if ((this._ClassID != value))
+				{
+					if (this._Class.HasLoadedOrAssignedValue)
+					{
+						throw new System.Data.Linq.ForeignKeyReferenceAlreadyHasValueException();
+					}
+					this.OnClassIDChanging(value);
+					this.SendPropertyChanging();
+					this._ClassID = value;
+					this.SendPropertyChanged("ClassID");
+					this.OnClassIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_TermID", DbType="Int")]
+		public System.Nullable<int> TermID
+		{
+			get
+			{
+				return this._TermID;
+			}
+			set
+			{
+				if ((this._TermID != value))
+				{
+					if (this._Term.HasLoadedOrAssignedValue)
+					{
+						throw new System.Data.Linq.ForeignKeyReferenceAlreadyHasValueException();
+					}
+					this.OnTermIDChanging(value);
+					this.SendPropertyChanging();
+					this._TermID = value;
+					this.SendPropertyChanged("TermID");
+					this.OnTermIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Class_ClassEnrollment", Storage="_Class", ThisKey="ClassID", OtherKey="ClassID", IsForeignKey=true)]
+		public Class Class
+		{
+			get
+			{
+				return this._Class.Entity;
+			}
+			set
+			{
+				Class previousValue = this._Class.Entity;
+				if (((previousValue != value) 
+							|| (this._Class.HasLoadedOrAssignedValue == false)))
+				{
+					this.SendPropertyChanging();
+					if ((previousValue != null))
+					{
+						this._Class.Entity = null;
+						previousValue.ClassEnrollment.Remove(this);
+					}
+					this._Class.Entity = value;
+					if ((value != null))
+					{
+						value.ClassEnrollment.Add(this);
+						this._ClassID = value.ClassID;
+					}
+					else
+					{
+						this._ClassID = default(Nullable<int>);
+					}
+					this.SendPropertyChanged("Class");
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Term_ClassEnrollment", Storage="_Term", ThisKey="TermID", OtherKey="TermID", IsForeignKey=true)]
+		public Term Term
+		{
+			get
+			{
+				return this._Term.Entity;
+			}
+			set
+			{
+				Term previousValue = this._Term.Entity;
+				if (((previousValue != value) 
+							|| (this._Term.HasLoadedOrAssignedValue == false)))
+				{
+					this.SendPropertyChanging();
+					if ((previousValue != null))
+					{
+						this._Term.Entity = null;
+						previousValue.ClassEnrollment.Remove(this);
+					}
+					this._Term.Entity = value;
+					if ((value != null))
+					{
+						value.ClassEnrollment.Add(this);
+						this._TermID = value.TermID;
+					}
+					else
+					{
+						this._TermID = default(Nullable<int>);
+					}
+					this.SendPropertyChanged("Term");
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Course_ClassEnrollment", Storage="_Course", ThisKey="CourseID", OtherKey="CourseID", IsForeignKey=true)]
+		public Course Course
+		{
+			get
+			{
+				return this._Course.Entity;
+			}
+			set
+			{
+				Course previousValue = this._Course.Entity;
+				if (((previousValue != value) 
+							|| (this._Course.HasLoadedOrAssignedValue == false)))
+				{
+					this.SendPropertyChanging();
+					if ((previousValue != null))
+					{
+						this._Course.Entity = null;
+						previousValue.ClassEnrollment.Remove(this);
+					}
+					this._Course.Entity = value;
+					if ((value != null))
+					{
+						value.ClassEnrollment.Add(this);
+						this._CourseID = value.CourseID;
+					}
+					else
+					{
+						this._CourseID = default(int);
+					}
+					this.SendPropertyChanged("Course");
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="ProgramEnrollment_ClassEnrollment", Storage="_ProgramEnrollment", ThisKey="ProgramEnrollmentID", OtherKey="ProgramEnrollmentID", IsForeignKey=true)]
+		public ProgramEnrollment ProgramEnrollment
+		{
+			get
+			{
+				return this._ProgramEnrollment.Entity;
+			}
+			set
+			{
+				ProgramEnrollment previousValue = this._ProgramEnrollment.Entity;
+				if (((previousValue != value) 
+							|| (this._ProgramEnrollment.HasLoadedOrAssignedValue == false)))
+				{
+					this.SendPropertyChanging();
+					if ((previousValue != null))
+					{
+						this._ProgramEnrollment.Entity = null;
+						previousValue.ClassEnrollment.Remove(this);
+					}
+					this._ProgramEnrollment.Entity = value;
+					if ((value != null))
+					{
+						value.ClassEnrollment.Add(this);
+						this._ProgramEnrollmentID = value.ProgramEnrollmentID;
+					}
+					else
+					{
+						this._ProgramEnrollmentID = default(int);
+					}
+					this.SendPropertyChanged("ProgramEnrollment");
+				}
+			}
+		}
+		
+		public event PropertyChangingEventHandler PropertyChanging;
+		
+		public event PropertyChangedEventHandler PropertyChanged;
+		
+		protected virtual void SendPropertyChanging()
+		{
+			if ((this.PropertyChanging != null))
+			{
+				this.PropertyChanging(this, emptyChangingEventArgs);
+			}
+		}
+		
+		protected virtual void SendPropertyChanged(String propertyName)
 		{
 			if ((this.PropertyChanged != null))
 			{
@@ -261,7 +865,7 @@ namespace AsynqTest.Data
 	}
 	
 	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.Course")]
-	internal sealed partial class Course : INotifyPropertyChanging, INotifyPropertyChanged
+	public partial class Course : INotifyPropertyChanging, INotifyPropertyChanged
 	{
 		
 		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
@@ -272,7 +876,9 @@ namespace AsynqTest.Data
 		
 		private string _Name;
 		
-		private EntitySet<Class> _Classes;
+		private EntitySet<Class> _Class;
+		
+		private EntitySet<ClassEnrollment> _ClassEnrollment;
 		
     #region Extensibility Method Definitions
     partial void OnLoaded();
@@ -288,7 +894,8 @@ namespace AsynqTest.Data
 		
 		public Course()
 		{
-			this._Classes = new EntitySet<Class>(new Action<Class>(this.attach_Classes), new Action<Class>(this.detach_Classes));
+			this._Class = new EntitySet<Class>(new Action<Class>(this.attach_Class), new Action<Class>(this.detach_Class));
+			this._ClassEnrollment = new EntitySet<ClassEnrollment>(new Action<ClassEnrollment>(this.attach_ClassEnrollment), new Action<ClassEnrollment>(this.detach_ClassEnrollment));
 			OnCreated();
 		}
 		
@@ -352,16 +959,29 @@ namespace AsynqTest.Data
 			}
 		}
 		
-		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Course_Class", Storage="_Classes", ThisKey="CourseID", OtherKey="CourseID")]
-		public EntitySet<Class> Classes
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Course_Class", Storage="_Class", ThisKey="CourseID", OtherKey="CourseID")]
+		public EntitySet<Class> Class
 		{
 			get
 			{
-				return this._Classes;
+				return this._Class;
 			}
 			set
 			{
-				this._Classes.Assign(value);
+				this._Class.Assign(value);
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="Course_ClassEnrollment", Storage="_ClassEnrollment", ThisKey="CourseID", OtherKey="CourseID")]
+		public EntitySet<ClassEnrollment> ClassEnrollment
+		{
+			get
+			{
+				return this._ClassEnrollment;
+			}
+			set
+			{
+				this._ClassEnrollment.Assign(value);
 			}
 		}
 		
@@ -369,7 +989,7 @@ namespace AsynqTest.Data
 		
 		public event PropertyChangedEventHandler PropertyChanged;
 		
-		private void SendPropertyChanging()
+		protected virtual void SendPropertyChanging()
 		{
 			if ((this.PropertyChanging != null))
 			{
@@ -377,7 +997,7 @@ namespace AsynqTest.Data
 			}
 		}
 		
-		private void SendPropertyChanged(String propertyName)
+		protected virtual void SendPropertyChanged(String propertyName)
 		{
 			if ((this.PropertyChanged != null))
 			{
@@ -385,16 +1005,276 @@ namespace AsynqTest.Data
 			}
 		}
 		
-		private void attach_Classes(Class entity)
+		private void attach_Class(Class entity)
 		{
 			this.SendPropertyChanging();
 			entity.Course = this;
 		}
 		
-		private void detach_Classes(Class entity)
+		private void detach_Class(Class entity)
 		{
 			this.SendPropertyChanging();
 			entity.Course = null;
+		}
+		
+		private void attach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Course = this;
+		}
+		
+		private void detach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.Course = null;
+		}
+	}
+	
+	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.ProgramEnrollment")]
+	public partial class ProgramEnrollment : INotifyPropertyChanging, INotifyPropertyChanged
+	{
+		
+		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
+		
+		private int _ProgramEnrollmentID;
+		
+		private int _StudentID;
+		
+		private int _ProgramVersionID;
+		
+		private EntitySet<ClassEnrollment> _ClassEnrollment;
+		
+    #region Extensibility Method Definitions
+    partial void OnLoaded();
+    partial void OnValidate(System.Data.Linq.ChangeAction action);
+    partial void OnCreated();
+    partial void OnProgramEnrollmentIDChanging(int value);
+    partial void OnProgramEnrollmentIDChanged();
+    partial void OnStudentIDChanging(int value);
+    partial void OnStudentIDChanged();
+    partial void OnProgramVersionIDChanging(int value);
+    partial void OnProgramVersionIDChanged();
+    #endregion
+		
+		public ProgramEnrollment()
+		{
+			this._ClassEnrollment = new EntitySet<ClassEnrollment>(new Action<ClassEnrollment>(this.attach_ClassEnrollment), new Action<ClassEnrollment>(this.detach_ClassEnrollment));
+			OnCreated();
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ProgramEnrollmentID", AutoSync=AutoSync.OnInsert, DbType="Int NOT NULL IDENTITY", IsPrimaryKey=true, IsDbGenerated=true)]
+		public int ProgramEnrollmentID
+		{
+			get
+			{
+				return this._ProgramEnrollmentID;
+			}
+			set
+			{
+				if ((this._ProgramEnrollmentID != value))
+				{
+					this.OnProgramEnrollmentIDChanging(value);
+					this.SendPropertyChanging();
+					this._ProgramEnrollmentID = value;
+					this.SendPropertyChanged("ProgramEnrollmentID");
+					this.OnProgramEnrollmentIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_StudentID", DbType="Int NOT NULL")]
+		public int StudentID
+		{
+			get
+			{
+				return this._StudentID;
+			}
+			set
+			{
+				if ((this._StudentID != value))
+				{
+					this.OnStudentIDChanging(value);
+					this.SendPropertyChanging();
+					this._StudentID = value;
+					this.SendPropertyChanged("StudentID");
+					this.OnStudentIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_ProgramVersionID", DbType="Int NOT NULL")]
+		public int ProgramVersionID
+		{
+			get
+			{
+				return this._ProgramVersionID;
+			}
+			set
+			{
+				if ((this._ProgramVersionID != value))
+				{
+					this.OnProgramVersionIDChanging(value);
+					this.SendPropertyChanging();
+					this._ProgramVersionID = value;
+					this.SendPropertyChanged("ProgramVersionID");
+					this.OnProgramVersionIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.AssociationAttribute(Name="ProgramEnrollment_ClassEnrollment", Storage="_ClassEnrollment", ThisKey="ProgramEnrollmentID", OtherKey="ProgramEnrollmentID")]
+		public EntitySet<ClassEnrollment> ClassEnrollment
+		{
+			get
+			{
+				return this._ClassEnrollment;
+			}
+			set
+			{
+				this._ClassEnrollment.Assign(value);
+			}
+		}
+		
+		public event PropertyChangingEventHandler PropertyChanging;
+		
+		public event PropertyChangedEventHandler PropertyChanged;
+		
+		protected virtual void SendPropertyChanging()
+		{
+			if ((this.PropertyChanging != null))
+			{
+				this.PropertyChanging(this, emptyChangingEventArgs);
+			}
+		}
+		
+		protected virtual void SendPropertyChanged(String propertyName)
+		{
+			if ((this.PropertyChanged != null))
+			{
+				this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
+		}
+		
+		private void attach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.ProgramEnrollment = this;
+		}
+		
+		private void detach_ClassEnrollment(ClassEnrollment entity)
+		{
+			this.SendPropertyChanging();
+			entity.ProgramEnrollment = null;
+		}
+	}
+	
+	[global::System.Data.Linq.Mapping.TableAttribute(Name="dbo.Staff")]
+	public partial class Staff : INotifyPropertyChanging, INotifyPropertyChanged
+	{
+		
+		private static PropertyChangingEventArgs emptyChangingEventArgs = new PropertyChangingEventArgs(String.Empty);
+		
+		private int _StaffID;
+		
+		private string _FirstName;
+		
+		private string _LastName;
+		
+    #region Extensibility Method Definitions
+    partial void OnLoaded();
+    partial void OnValidate(System.Data.Linq.ChangeAction action);
+    partial void OnCreated();
+    partial void OnStaffIDChanging(int value);
+    partial void OnStaffIDChanged();
+    partial void OnFirstNameChanging(string value);
+    partial void OnFirstNameChanged();
+    partial void OnLastNameChanging(string value);
+    partial void OnLastNameChanged();
+    #endregion
+		
+		public Staff()
+		{
+			OnCreated();
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_StaffID", AutoSync=AutoSync.OnInsert, DbType="Int NOT NULL IDENTITY", IsPrimaryKey=true, IsDbGenerated=true)]
+		public int StaffID
+		{
+			get
+			{
+				return this._StaffID;
+			}
+			set
+			{
+				if ((this._StaffID != value))
+				{
+					this.OnStaffIDChanging(value);
+					this.SendPropertyChanging();
+					this._StaffID = value;
+					this.SendPropertyChanged("StaffID");
+					this.OnStaffIDChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_FirstName", DbType="NVarChar(64) NOT NULL", CanBeNull=false)]
+		public string FirstName
+		{
+			get
+			{
+				return this._FirstName;
+			}
+			set
+			{
+				if ((this._FirstName != value))
+				{
+					this.OnFirstNameChanging(value);
+					this.SendPropertyChanging();
+					this._FirstName = value;
+					this.SendPropertyChanged("FirstName");
+					this.OnFirstNameChanged();
+				}
+			}
+		}
+		
+		[global::System.Data.Linq.Mapping.ColumnAttribute(Storage="_LastName", DbType="NVarChar(64) NOT NULL", CanBeNull=false)]
+		public string LastName
+		{
+			get
+			{
+				return this._LastName;
+			}
+			set
+			{
+				if ((this._LastName != value))
+				{
+					this.OnLastNameChanging(value);
+					this.SendPropertyChanging();
+					this._LastName = value;
+					this.SendPropertyChanged("LastName");
+					this.OnLastNameChanged();
+				}
+			}
+		}
+		
+		public event PropertyChangingEventHandler PropertyChanging;
+		
+		public event PropertyChangedEventHandler PropertyChanged;
+		
+		protected virtual void SendPropertyChanging()
+		{
+			if ((this.PropertyChanging != null))
+			{
+				this.PropertyChanging(this, emptyChangingEventArgs);
+			}
+		}
+		
+		protected virtual void SendPropertyChanged(String propertyName)
+		{
+			if ((this.PropertyChanged != null))
+			{
+				this.PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+			}
 		}
 	}
 }

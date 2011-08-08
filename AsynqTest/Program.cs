@@ -55,43 +55,21 @@ namespace AsynqTest
                 }
             }
 #endif
-            const int queryCount = 500;
+            const int queryCount = 250;
 
             //const string connString = @"tmp.sdf";
             const string connString = @"Data Source=.\SQLEXPRESS;Initial Catalog=Asynq;Integrated Security=SSPI;Asynchronous Processing=true";
             Console.WriteLine("Using '{0}'...", connString);
 
-            List<Tuple<Models.Class, Models.Course>>[] resultsSync = new List<Tuple<Models.Class,Models.Course>>[queryCount];
-            List<Tuple<Models.Class, Models.Course>>[] resultsAsynq = new List<Tuple<Models.Class, Models.Course>>[queryCount];
-#if NonAsyncCompare
+            var query = ClassEnrollmentQueryDescriptors.Default.GetClassEnrollmentDetailsByProgramEnrollmentID;
 
-            using (var db = new Data.ExampleDataContext(connString))
-            {
-                Console.WriteLine("Beginning synchronous standard LINQ-to-SQL querying...");
-
-                Stopwatch swTimer = Stopwatch.StartNew();
-                for (int i = 0; i < queryCount; ++i)
-                {
-                    var constructed = ClassQueryDescriptors.Default.GetClassByID.Construct(db, new OneIDParameter<Models.ClassID>(new Models.ClassID((i % 11) + 1)));
-                    var rows = constructed.Query.Cast<object>().Select(constructed.RowProjection).ToList();
-                    resultsSync[i] = rows;
-                }
-
-                swTimer.Stop();
-
-                Console.WriteLine("Sync LINQ-to-SQL completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
-                    ,queryCount
-                    ,swTimer.ElapsedMilliseconds
-                    ,swTimer.ElapsedMilliseconds / (double)queryCount
-                    ,(queryCount / (double)swTimer.ElapsedMilliseconds) * 1000d
-                );
-            }
-#endif
+            var resultsSync = new List<Tuple<Models.ClassEnrollment, Models.Course, Models.Class, Models.Term, Models.Course, Models.Staff>>[queryCount];
+            var resultsAsynq = new List<Tuple<Models.ClassEnrollment, Models.Course, Models.Class, Models.Term, Models.Course, Models.Staff>>[queryCount];
 
             {
                 var descriptors = ClassQueryDescriptors.Default;
 
-                var queries = new IObservable<List<Tuple<Models.Class, Models.Course>>>[queryCount];
+                var queries = new IObservable<List<Tuple<Models.ClassEnrollment, Models.Course, Models.Class, Models.Term, Models.Course, Models.Staff>>>[queryCount];
 
                 Console.WriteLine("Beginning asynchronous Asynq LINQ-to-SQL querying...");
 
@@ -100,13 +78,13 @@ namespace AsynqTest
                 {
                     queries[i] = Asynq.ExecuteQuery(
                         // Pass a lambda used to instantiate a new data context per each query:
-                        createContext: () => new Data.ExampleDataContext(connString)
+                        createContext:  () => new Data.ExampleDataContext(connString)
                         // Give the query descriptor:
-                       ,descriptor: descriptors.GetClassByID
+                       ,descriptor:     query
                         // Give the parameter container struct:
-                       ,parameters: new OneIDParameter<Models.ClassID>(new Models.ClassID((i % 11) + 1))
+                       ,parameters:     new OneIDParameter<Models.ProgramEnrollmentID>(new Models.ProgramEnrollmentID((i % 11) + 1))
                         // Optional argument used to give an initial expected capacity of the result's List<T>:
-                       ,expectedCount: 1
+                       ,expectedCount:  1
                     );
                 }
 
@@ -116,8 +94,7 @@ namespace AsynqTest
                 for (int i = 0; i < queryCount; ++i)
                 {
                     // First() is blocking here, but the query should most likely already be complete:
-                    List<Tuple<Models.Class, Models.Course>> rows = queries[i].First();
-
+                    var rows = queries[i].First();
                     resultsAsynq[i] = rows;
 
 #if TEST
@@ -142,6 +119,31 @@ namespace AsynqTest
                     , swTimer.ElapsedMilliseconds / (double)queries.Length
                     , (queries.Length / (double)swTimer.ElapsedMilliseconds) * 1000d);
             }
+
+#if NonAsyncCompare
+
+            using (var db = new Data.ExampleDataContext(connString))
+            {
+                Console.WriteLine("Beginning synchronous standard LINQ-to-SQL querying...");
+
+                Stopwatch swTimer = Stopwatch.StartNew();
+                for (int i = 0; i < queryCount; ++i)
+                {
+                    var constructed = query.Construct(db, new OneIDParameter<Models.ProgramEnrollmentID>(new Models.ProgramEnrollmentID((i % 11) + 1)));
+                    var rows = constructed.Query.Cast<object>().Select(constructed.RowProjection).ToList();
+                    resultsSync[i] = rows;
+                }
+
+                swTimer.Stop();
+
+                Console.WriteLine("Sync LINQ-to-SQL completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
+                    , queryCount
+                    , swTimer.ElapsedMilliseconds
+                    , swTimer.ElapsedMilliseconds / (double)queryCount
+                    , (queryCount / (double)swTimer.ElapsedMilliseconds) * 1000d
+                );
+            }
+#endif
 
             // Compare results:
             for (int i = 0; i < queryCount; ++i)
