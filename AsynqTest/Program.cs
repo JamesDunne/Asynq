@@ -67,8 +67,6 @@ namespace AsynqTest
             var resultsAsynq = new List<Tuple<Models.ClassEnrollment, Models.Course, Models.Class, Models.Term, Models.Course, Models.Staff>>[queryCount];
 
             {
-                var descriptors = ClassQueryDescriptors.Default;
-
                 var queries = new IObservable<List<Tuple<Models.ClassEnrollment, Models.Course, Models.Class, Models.Term, Models.Course, Models.Staff>>>[queryCount];
 
                 Console.WriteLine("Beginning asynchronous Asynq LINQ-to-SQL querying...");
@@ -113,11 +111,38 @@ namespace AsynqTest
 
                 swTimer.Stop();
 
-                Console.WriteLine("Asynq completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
-                    , queries.Length
+                Console.WriteLine("Asynchronous Asynq completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
+                    , queryCount
                     , swTimer.ElapsedMilliseconds
-                    , swTimer.ElapsedMilliseconds / (double)queries.Length
-                    , (queries.Length / (double)swTimer.ElapsedMilliseconds) * 1000d);
+                    , swTimer.ElapsedMilliseconds / (double)queryCount
+                    , (queryCount / (double)swTimer.ElapsedMilliseconds) * 1000d);
+            }
+
+            // Synchronous Asynq testing:
+            {
+                Console.WriteLine("Beginning synchronous Asynq LINQ-to-SQL querying...");
+
+                Stopwatch swTimer = Stopwatch.StartNew();
+                for (int i = 0; i < queryCount; ++i)
+                {
+                    Asynq.ExecuteQuerySync(
+                        // Pass a lambda used to instantiate a new data context per each query:
+                        createContext:  () => new Data.ExampleDataContext(connString)
+                        // Give the query descriptor:
+                       ,descriptor:     query
+                        // Give the parameter container struct:
+                       ,parameters:     new OneIDParameter<Models.ProgramEnrollmentID>(new Models.ProgramEnrollmentID((i % 11) + 1))
+                        // Optional argument used to give an initial expected capacity of the result's List<T>:
+                       ,expectedCount:  1
+                    );
+                }
+                swTimer.Stop();
+
+                Console.WriteLine("Synchronous Asynq completed {0} queries in {1} ms, average {2} ms/query, {3} queries/sec"
+                    , queryCount
+                    , swTimer.ElapsedMilliseconds
+                    , swTimer.ElapsedMilliseconds / (double)queryCount
+                    , (queryCount / (double)swTimer.ElapsedMilliseconds) * 1000d);
             }
 
 #if NonAsyncCompare
