@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Reflection;
 using AsynqFramework.Materialization;
 using System.Threading;
+using System.Data;
 
 namespace AsynqFramework
 {
@@ -123,7 +124,6 @@ namespace AsynqFramework
             }
         }
 
-        // Attempt async execution:
         public static IObservable<List<Tresult>> ExecuteQuery<Tcontext, Tparameters, Tresult>(Func<Tcontext> createContext, QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tparameters parameters, int expectedCount = 10)
             where Tcontext : System.Data.Linq.DataContext
             where Tparameters : struct
@@ -234,6 +234,81 @@ namespace AsynqFramework
             else
             {
                 throw new NotSupportedException();
+            }
+        }
+
+        public static List<Tresult> ExecuteQuerySync<Tcontext, Tparameters, Tresult>(Func<Tcontext> createContext, QueryDescriptor<Tcontext, Tparameters, Tresult> descriptor, Tparameters parameters, int expectedCount = 10)
+            where Tcontext : System.Data.Linq.DataContext
+            where Tparameters : struct
+            where Tresult : class
+        {
+            using (var db = createContext())
+            {
+                // Construct an IQueryable given the parameters and datacontext:
+                var query = descriptor.Construct(db, parameters);
+
+                // Get the DbCommand used to execute the query:
+                DbCommand cmd = db.GetCommand(query.Query);
+
+#if DEBUG
+                // Dump the linq query to the console, colored:
+                Console.WriteLine();
+                var cw = new ConsoleColoredCodeWriter();
+                new AsynqFramework.QueryProjector.LinqSyntaxExpressionFormatter(cw).WriteFormat(query.Query.Expression, Console.Out);
+                Console.WriteLine();
+
+                // Dump the SQL query:
+                Console.WriteLine();
+                foreach (DbParameter prm in cmd.Parameters)
+                {
+                    Console.WriteLine("SET {0} = {1};", prm.ParameterName, prm.Value);
+                }
+                Console.WriteLine();
+                Console.WriteLine(cmd.CommandText);
+                Console.WriteLine();
+#endif
+
+                // Connection must be unique per DataContext:
+                cmd.Connection.Open();
+
+                SqlCeCommand sqlcmdCE;
+                SqlCommand sqlcmd;
+                IDataReader dr;
+
+                if ((sqlcmdCE = cmd as SqlCeCommand) != null)
+                {
+                    Debug.Assert(sqlcmdCE.Connection != null);
+                    Debug.Assert(sqlcmdCE.Connection.State == System.Data.ConnectionState.Open);
+
+                    dr = sqlcmdCE.ExecuteReader(CommandBehavior.CloseConnection);
+                }
+                else if ((sqlcmd = cmd as SqlCommand) != null)
+                {
+                    Debug.Assert(sqlcmd.Connection != null);
+                    Debug.Assert(sqlcmd.Connection.State == System.Data.ConnectionState.Open);
+
+                    // Start the async IO to the database:
+                    dr = sqlcmd.ExecuteReader(System.Data.CommandBehavior.CloseConnection);
+                }
+                else
+                {
+                    throw new NotSupportedException();
+                }
+
+                var materializer = new DataRecordObjectMaterializer();
+                var mapping = materializer.GetCachedMaterializationMapping(query.Query.Expression, query.Query.ElementType, dr);
+
+                // Build a List so we can get out of here as soon as possible:
+                List<Tresult> items = new List<Tresult>(expectedCount);
+                while (dr.Read())
+                {
+                    object row = materializer.Materialize(mapping, dr);
+
+                    Tresult tmp = query.RowProjection(row);
+                    items.Add(tmp);
+                }
+
+                return items;
             }
         }
     }
